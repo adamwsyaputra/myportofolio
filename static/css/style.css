@@ -245,6 +245,96 @@ html {
   line-height: 1.5;
 }
 
+.projects-section {
+  padding: 4.5rem 0 5.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.project-card {
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 5px 5px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 7px 7px 0 var(--accent);
+}
+
+.project-art-banner {
+  height: 100px;
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  border-bottom: 3px solid var(--ink);
+}
+
+.project-art-banner.dark-banner {
+  background: linear-gradient(135deg, #220000 0%, var(--ink) 100%);
+}
+
+.banner-icon {
+  font-size: 1.8rem;
+}
+
+.project-art-banner code {
+  font-family: "Courier New", monospace;
+  font-size: 0.8rem;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.project-body {
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.project-body h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.6rem;
+  color: var(--ink);
+}
+
+.project-body p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+  flex-grow: 1;
+}
+
+.project-tags {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.project-tags span {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 2px;
+}
+
 @media (max-width: 600px) {
   .hero-grid {
     grid-template-columns: 1fr;
