@@ -176,6 +176,10 @@ h1, .brand {
   border-top: 1px solid var(--line);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 @media (max-width: 600px) {
   .hero-grid {
     grid-template-columns: 1fr;
@@ -192,4 +196,5 @@ h1, .brand {
   .social-links {
     justify-content: flex-start;
   }
+
 }
