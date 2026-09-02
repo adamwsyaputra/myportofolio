@@ -351,5 +351,15 @@ html {
   .social-links {
     justify-content: flex-start;
   }
+  
+  .skills-grid,
+  .projects-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
 
+  .tilt-left,
+  .tilt-right {
+    transform: none;
+  }
 }
