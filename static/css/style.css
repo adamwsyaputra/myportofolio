@@ -4,13 +4,18 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   --ink: #1c1917;
-  --paper: #faf6f0;
+  --paper: #f2ede4;
+  --surface: #ffffff;
   --accent: #d95d39;
   --accent-dark: #a8442a;
-  --line: #e3d9c9;
-  --text-muted: #6b6459;
+  --line: #dbd2c3; 
+  --text-muted: #635d54;
   --radius: 4px;
 }
 
@@ -21,7 +26,7 @@ body {
   line-height: 1.6;
 }
 
-h1, .brand {
+h1, h2, h3, .brand {
   font-family: "Space Grotesk", -apple-system, sans-serif;
 }
 
@@ -31,7 +36,13 @@ h1, .brand {
   padding: 0 1.5rem;
 }
 
+/* --- Header --- */
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: rgba(250, 246, 240, 0.95);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
 
@@ -58,10 +69,20 @@ h1, .brand {
   color: var(--ink);
   text-decoration: none;
   font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
+.site-header nav a:hover {
+  color: var(--accent);
+}
+
+/* --- Section 1: Hero--- */
 .hero {
-  padding: 4.5rem 0 5rem;
+  padding: 5rem 0;
+  background-color: var(--paper);
+  background-image: radial-gradient(rgba(28, 25, 23, 0.303) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
 }
 
 .hero-grid {
@@ -169,25 +190,14 @@ h1, .brand {
   border: 3px solid var(--ink);
 }
 
-.site-footer {
-  padding: 1.5rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  border-top: 1px solid var(--line);
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-/* --- Skills Section --- */
+/* --- Section 2: Skills--- */
 .skills-section {
-  padding: 4.5rem 0;
+  padding: 5rem 0;
+  background-color: var(--surface);
   border-top: 1px solid var(--line);
 }
 
 .section-title {
-  font-family: "Space Grotesk", -apple-system, sans-serif;
   font-size: 2.25rem;
   margin-bottom: 2rem;
   color: var(--ink);
@@ -246,9 +256,12 @@ html {
   line-height: 1.5;
 }
 
-/* --- Projects Section --- */
+/* --- Section 3: Projects --- */
 .projects-section {
-  padding: 4.5rem 0 5.5rem;
+  padding: 5rem 0 5.5rem;
+  background-color: var(--paper);
+  background-image: radial-gradient(rgba(28, 25, 23, 0.302) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
   border-top: 1px solid var(--line);
 }
 
@@ -259,7 +272,7 @@ html {
 }
 
 .project-card {
-  background: #fff;
+  background: var(--surface);
   border: 3px solid var(--ink);
   border-radius: var(--radius);
   overflow: hidden;
@@ -275,7 +288,7 @@ html {
 }
 
 .project-art-banner {
-  height: 100px;
+  height: 90px;
   background: var(--ink);
   color: #fff;
   display: flex;
@@ -290,7 +303,7 @@ html {
 }
 
 .banner-icon {
-  font-size: 1.8rem;
+  font-size: 1.7rem;
 }
 
 .project-art-banner code {
@@ -337,11 +350,11 @@ html {
   border-radius: 2px;
 }
 
-/* --- Experience Timeline --- */
+/* --- Section 4: Experience--- */
 .experience-section {
   padding: 5rem 0;
+  background-color: var(--surface);
   border-top: 1px solid var(--line);
-  background-color: var(--paper);
 }
 
 .exp-grid {
@@ -351,16 +364,11 @@ html {
 }
 
 .exp-title {
-  font-family: "Space Grotesk", -apple-system, sans-serif;
   font-size: 2.75rem;
   line-height: 0.9;
   letter-spacing: -0.04em;
   color: var(--ink);
   text-transform: uppercase;
-}
-
-.exp-title span {
-  color: var(--ink);
 }
 
 .timeline {
@@ -375,7 +383,6 @@ html {
   position: relative;
 }
 
-/* Red Diamond Node */
 .timeline-item::before {
   content: "";
   position: absolute;
@@ -400,7 +407,6 @@ html {
 }
 
 .timeline-item h3 {
-  font-family: "Space Grotesk", -apple-system, sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -417,11 +423,123 @@ html {
   max-width: 580px;
 }
 
+/* --- Section 5: Contact & Footer--- */
+.contact-section {
+  padding: 5.5rem 0 6rem;
+  background-color: #0d0d0d;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1.5px, transparent 1.5px);
+  background-size: 16px 16px;
+  border-top: 1px solid var(--ink);
+}
+
+.contact-panel {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 3rem 3.5rem;
+  background: #050505;
+  background-image: radial-gradient(rgba(217, 93, 57, 0.12) 1.5px, transparent 1.5px);
+  background-size: 12px 12px;
+  border: 4px solid #ffffff;
+  box-shadow: 10px 10px 0 var(--accent);
+  transform: rotate(-1deg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.contact-panel:hover {
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow: 12px 12px 0 var(--accent);
+}
+
+.contact-heading {
+  margin-bottom: 1.25rem;
+}
+
+.heading-sub {
+  display: block;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 0.9;
+}
+
+.heading-main {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.contact-text {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.95rem;
+  color: #c9c9c3;
+  margin-bottom: 2rem;
+  line-height: 1.45;
+}
+
+.contact-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  background: #ffffff;
+  color: #050505;
+  padding: 0.85rem 1.4rem;
+  border: 3px solid #050505;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 5px 5px 0 var(--accent);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.contact-button:hover {
+  background-color: var(--paper);
+  transform: translate(-2px, -2px);
+}
+
+.contact-arrow {
+  color: var(--accent);
+  font-size: 1.2rem;
+}
+
+.contact-links {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1.5rem;
+}
+
+.contact-links a {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  color: #c9c9c3;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.contact-links a:hover {
+  color: var(--accent);
+}
+
+.site-footer {
+  padding: 2rem 1.5rem;
+  background-color: #12100e;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a8a29e;
+  font-size: 0.85rem;
+}
+
+/* --- Mobile Responsiveness --- */
 @media (max-width: 600px) {
   .site-header nav {
     gap: 1rem;
     overflow-x: auto;
     padding-bottom: 0.25rem;
+  }
+
+  .hero {
+    padding: 3.5rem 0;
   }
 
   .hero-grid {
@@ -440,6 +558,12 @@ html {
     justify-content: flex-start;
   }
 
+  .skills-section,
+  .projects-section,
+  .experience-section {
+    padding: 3.5rem 0;
+  }
+
   .skills-grid,
   .projects-grid {
     grid-template-columns: 1fr;
@@ -449,10 +573,6 @@ html {
   .tilt-left,
   .tilt-right {
     transform: none;
-  }
-
-  .experience-section {
-    padding: 3.5rem 0;
   }
 
   .exp-grid {
@@ -511,6 +631,7 @@ html {
     justify-content: space-between;
     font-size: 0.85rem;
     padding: 0.75rem 1rem;
+    word-break: break-all;
   }
 
   .contact-links {
