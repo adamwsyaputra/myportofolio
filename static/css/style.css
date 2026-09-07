@@ -180,6 +180,7 @@ html {
   scroll-behavior: smooth;
 }
 
+/* --- Skills Section --- */
 .skills-section {
   padding: 4.5rem 0;
   border-top: 1px solid var(--line);
@@ -245,6 +246,7 @@ html {
   line-height: 1.5;
 }
 
+/* --- Projects Section --- */
 .projects-section {
   padding: 4.5rem 0 5.5rem;
   border-top: 1px solid var(--line);
@@ -335,7 +337,93 @@ html {
   border-radius: 2px;
 }
 
+/* --- Experience Timeline --- */
+.experience-section {
+  padding: 5rem 0;
+  border-top: 1px solid var(--line);
+  background-color: var(--paper);
+}
+
+.exp-grid {
+  display: grid;
+  grid-template-columns: 32% 1fr;
+  gap: 3rem;
+}
+
+.exp-title {
+  font-family: "Space Grotesk", -apple-system, sans-serif;
+  font-size: 2.75rem;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.exp-title span {
+  color: var(--ink);
+}
+
+.timeline {
+  border-left: 4px solid var(--ink);
+  padding-left: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.timeline-item {
+  position: relative;
+}
+
+/* Red Diamond Node */
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: calc(-2rem - 11px);
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+  border: 3px solid var(--ink);
+  transform: rotate(45deg);
+}
+
+.timeline-year {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.05em;
+}
+
+.timeline-item h3 {
+  font-family: "Space Grotesk", -apple-system, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.35rem;
+  color: var(--ink);
+}
+
+.timeline-item p {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  max-width: 580px;
+}
+
 @media (max-width: 600px) {
+  .site-header nav {
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
   .hero-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -351,7 +439,7 @@ html {
   .social-links {
     justify-content: flex-start;
   }
-  
+
   .skills-grid,
   .projects-grid {
     grid-template-columns: 1fr;
@@ -361,5 +449,72 @@ html {
   .tilt-left,
   .tilt-right {
     transform: none;
+  }
+
+  .experience-section {
+    padding: 3.5rem 0;
+  }
+
+  .exp-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .exp-title {
+    font-size: 2.2rem;
+    line-height: 1;
+  }
+
+  .timeline {
+    border-left: 3px solid var(--ink);
+    padding-left: 1.75rem;
+    margin-left: 0.75rem;
+    gap: 2rem;
+  }
+
+  .timeline-item::before {
+    left: calc(-1.75rem - 8.5px);
+    top: 3px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .timeline-item h3 {
+    font-size: 1.05rem;
+  }
+
+  .timeline-item p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  .contact-section {
+    padding: 3.5rem 0 4.5rem;
+  }
+
+  .contact-panel {
+    padding: 2rem 1.25rem;
+    transform: none;
+    box-shadow: 6px 6px 0 var(--accent);
+  }
+
+  .heading-sub {
+    font-size: 1.75rem;
+  }
+
+  .heading-main {
+    font-size: 2.5rem;
+  }
+
+  .contact-button {
+    width: 100%;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .contact-links {
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 }
