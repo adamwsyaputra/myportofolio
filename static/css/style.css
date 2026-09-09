@@ -530,6 +530,77 @@ h1, h2, h3, .brand {
   font-size: 0.85rem;
 }
 
+/* --- Dedicated Experience Page (/experience/) --- */
+.experience-page-section {
+  padding: 5rem 0;
+  min-height: 70vh;
+}
+
+.page-title {
+  font-size: 2.75rem;
+  margin: 0.5rem 0 2rem;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+}
+
+.experience-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.experience-card {
+  background-color: var(--surface);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: 5px 5px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+
+.experience-category {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.experience-card h2 {
+  font-size: 1.3rem;
+  margin-bottom: 0.6rem;
+  color: var(--ink);
+}
+
+.experience-description {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  flex-grow: 1;
+}
+
+.experience-status {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.experience-status.ongoing {
+  color: var(--accent);
+}
+
+.experience-status.completed {
+  color: var(--text-muted);
+}
+
+.empty-state {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 2rem 0;
+}
+
 /* --- Mobile Responsiveness --- */
 @media (max-width: 600px) {
   .site-header nav {
