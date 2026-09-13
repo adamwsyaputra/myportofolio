@@ -15,6 +15,7 @@
       <a href="{% url 'main:show_main' %}" class="brand">{{ name }}</a>
       <nav>
         <a href="{% url 'main:show_main' %}">Profile</a>
+        <a href="{% url 'main:show_projects' %}">Projects</a>
         <a href="{% url 'main:show_experience' %}">Experience</a>
       </nav>
     </div>
@@ -23,8 +24,8 @@
   <main>
     <section class="experience-page-section">
       <div class="container">
-        <p class="section-kicker">MY JOURNEY SO FAR</p>
-        <h1 class="page-title">Experience</h1>
+        <p class="hero-kicker">MY JOURNEY SO FAR</p>
+        <h1 class="section-title">Experience</h1>
         
         <div class="experience-cards-grid">
           {% for experience in experience_list %}
