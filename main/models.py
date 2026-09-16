@@ -33,6 +33,7 @@ class Project(models.Model):
     description = models.TextField()
     tech_stack = models.CharField(max_length=255)
     project_url = models.URLField(blank=True, null=True)
+    project_image_url = models.URLField(blank=True, null=True, max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
