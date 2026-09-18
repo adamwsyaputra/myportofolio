@@ -45,6 +45,7 @@ class Skill(models.Model):
         ('frameworks', 'Frameworks & Tools'),
         ('systems', 'Systems & Architecture'),
         ('security', 'Cybersecurity & Networking'),
+        ('others', 'Other'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

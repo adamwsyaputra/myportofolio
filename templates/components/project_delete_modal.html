@@ -1,7 +1,8 @@
 <button type="button"
-        class="button-danger-sm"
+        class="comic-btn comic-btn-sm comic-btn-danger"
         popovertarget="delete-project-{{ project.id }}"
-        aria-label="Hapus {{ project.title }}">
+        aria-label="Hapus {{ project.title }}"
+        title="Hapus proyek">
   Hapus
 </button>
 
@@ -9,28 +10,42 @@
      class="project-delete-modal"
      popover="auto"
      role="dialog"
-     aria-modal="true">
+     aria-modal="true"
+     aria-labelledby="delete-project-title-{{ project.id }}">
   <button type="button"
           class="project-delete-modal_backdrop"
           popovertarget="delete-project-{{ project.id }}"
-          popovertargetaction="hide"></button>
+          popovertargetaction="hide"
+          aria-label="Tutup konfirmasi hapus"></button>
   <div class="project-delete-modal_content">
     <button type="button"
             class="project-delete-modal_close"
             popovertarget="delete-project-{{ project.id }}"
-            popovertargetaction="hide">&times;</button>
-    <h2>Hapus Proyek?</h2>
-    <p>Apakah Anda yakin ingin menghapus <strong>{{ project.title }}</strong>?</p>
-    <div class="project-delete-modal_actions">
-      <button type="button"
-              class="social-link"
-              style="border: none; cursor: pointer; background: var(--line); color: var(--ink);"
-              popovertarget="delete-project-{{ project.id }}"
-              popovertargetaction="hide">Batal</button>
-      <form method="post" action="{% url 'main:delete_project' project.id %}">
-        {% csrf_token %}
-        <button type="submit" class="button-danger-sm" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Ya, Hapus</button>
-      </form>
-    </div>
+            popovertargetaction="hide"
+            aria-label="Tutup konfirmasi hapus">&times;</button>
+    <p class="hero-kicker" style="margin-bottom: 0.25rem;">CONFIRM ACTION</p>
+    <h2 id="delete-project-title-{{ project.id }}" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-bottom: 0.75rem;">Hapus Proyek?</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1.25rem;">
+      Apakah Anda yakin ingin menghapus <strong>{{ project.title }}</strong>?
+    </p>
+
+    <form method="post" action="{% url 'main:delete_project' project.id %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="code-proj-{{ project.id }}">Masukkan Kode Rahasia:</label>
+        <input type="password"
+               id="code-proj-{{ project.id }}"
+               name="secret_code"
+               placeholder="Enter passcode..."
+               required>
+      </div>
+      <div class="project-delete-modal_actions">
+        <button type="button"
+                class="comic-btn comic-btn-sm comic-btn-secondary"
+                popovertarget="delete-project-{{ project.id }}"
+                popovertargetaction="hide">Batal</button>
+        <button type="submit" class="comic-btn comic-btn-sm comic-btn-danger">Ya, Hapus</button>
+      </div>
+    </form>
   </div>
 </div>

@@ -40,15 +40,39 @@ def create_project(request):
     context = {
         "name": NAME,
         "form": form,
+        "action_title": "Add New Project",
+        "btn_label": "Tambah Project",
+        "kicker": "TAMBAHKAN PROYEK BARU",
+    }
+    return render(request, "projects_form.html", context)
+
+def update_project(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    form = ProjectForm(request.POST or None, instance=project)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"Proyek {project.title} berhasil diperbarui!")
+        return redirect("main:show_projects")
+
+    context = {
+        "name": NAME,
+        "form": form,
+        "action_title": f"Edit Project: {project.title}",
+        "btn_label": "Simpan Perubahan",
+        "kicker": "MANAGEMENT CONSOLE",
     }
     return render(request, "projects_form.html", context)
 
 def delete_project(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
     if request.method == "POST":
-        project.delete()
-        messages.success(request, "Project berhasil dihapus!")
-        return redirect("main:show_projects")
+        code = request.POST.get("secret_code", "")
+        expected_code = settings.PORTFOLIO_SECRET_CODE
+        if not expected_code or code == expected_code:
+            project.delete()
+            messages.success(request, "Project berhasil dihapus!")
+        else:
+            messages.error(request, "Gagal menghapus: Kode rahasia salah!")
     return redirect("main:show_projects")
 
 def get_projects_json(request):

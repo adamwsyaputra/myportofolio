@@ -395,6 +395,41 @@ h1, h2, h3, .brand {
   border-radius: 2px;
 }
 
+/* Projects Page Layout & Card Actions */
+.projects-section .container {
+  max-width: 1040px;
+}
+
+.projects-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.5rem;
+}
+
+.project-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: auto;
+  padding-top: 1.25rem;
+  border-top: 2px dashed var(--line);
+}
+
+.project-card-actions_manage {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.project-card-actions .comic-btn-sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 /* --- Section 4: Experience--- */
 .experience-section {
   padding: 5rem 0;

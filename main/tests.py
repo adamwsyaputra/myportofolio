@@ -81,3 +81,48 @@ class ProjectTest(TestCase):
 
     def test_project_model_str(self):
         self.assertEqual(str(self.project), "EduText AI")
+
+    def test_projects_page_contains_edit_link(self):
+        response = self.client.get(reverse("main:show_projects"))
+        self.assertEqual(response.status_code, 200)
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        self.assertContains(response, f'href="{edit_url}"')
+
+    def test_update_project_get(self):
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "projects_form.html")
+        self.assertContains(response, self.project.title)
+        self.assertContains(response, "Edit Project:")
+
+    def test_update_project_post_valid(self):
+        from django.conf import settings
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        payload = {
+            "title": "EduText AI Updated",
+            "description": "Updated description for AI SMS.",
+            "tech_stack": "Python, Django, Telephony",
+            "project_url": "https://github.com/adamwsyaputra/updated",
+            "project_image_url": "",
+            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
+        }
+        response = self.client.post(edit_url, payload)
+        self.assertRedirects(response, reverse("main:show_projects"))
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.title, "EduText AI Updated")
+
+    def test_update_project_post_invalid_passcode(self):
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        payload = {
+            "title": "Hacked Title",
+            "description": "Hacked description.",
+            "tech_stack": "Hacked",
+            "project_url": "https://hacked.com",
+            "project_image_url": "",
+            "secret_code": "wrong_passcode_xyz",
+        }
+        response = self.client.post(edit_url, payload)
+        self.assertEqual(response.status_code, 200)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.title, "EduText AI")

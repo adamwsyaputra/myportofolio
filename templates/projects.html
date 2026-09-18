@@ -12,7 +12,7 @@
         <p class="hero-kicker">KARYA YANG SAYA BANGUN</p>
         <h1 class="section-title" style="margin-bottom: 0;">Projects</h1>
       </div>
-      <a href="{% url 'main:create_project' %}" class="social-link" style="padding: 0.65rem 1.2rem; font-size: 0.9rem;">
+      <a href="{% url 'main:create_project' %}" class="comic-btn comic-btn-primary">
         + Tambah Proyek
       </a>
     </div>
@@ -23,10 +23,10 @@
              value="{{ title_query }}"
              placeholder="Cari berdasarkan nama proyek..."
              class="project-search_input">
-      <button type="submit" class="social-link" style="border: 2px solid var(--ink); cursor: pointer;">Cari</button>
+      <button type="submit" class="comic-btn comic-btn-dark">Cari</button>
     </form>
 
-    <div class="projects-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+    <div class="projects-grid projects-page-grid">
       {% for project in project_list %}
         <article class="project-card">
           {% if project.project_image_url %}
@@ -43,15 +43,20 @@
             <div class="project-tags">
               <span>{{ project.tech_stack }}</span>
             </div>
-            <div class="project-card-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 1.25rem;">
+            <div class="project-card-actions">
               {% if project.project_url %}
-                <a href="{{ project.project_url }}" target="_blank" rel="noreferrer" class="social-link" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">
+                <a href="{{ project.project_url }}" target="_blank" rel="noreferrer" class="comic-btn comic-btn-sm comic-btn-dark">
                   Lihat Proyek &rarr;
                 </a>
               {% else %}
                 <span></span>
               {% endif %}
-              {% include "components/project_delete_modal.html" with project=project %}
+              <div class="project-card-actions_manage">
+                <a href="{% url 'main:update_project' project.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
+                  Edit
+                </a>
+                {% include "components/project_delete_modal.html" with project=project %}
+              </div>
             </div>
           </div>
         </article>

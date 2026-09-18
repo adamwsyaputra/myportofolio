@@ -5,6 +5,17 @@ from django.forms import ModelForm, TextInput, Textarea, Select, NumberInput, Ch
 from main.models import Project, Skill
 
 class ProjectForm(ModelForm):
+    secret_code = forms.CharField(
+        widget=forms.PasswordInput(
+            attrs={
+                "placeholder": "Enter secret code to authorize",
+                "class": "form-input",
+            }
+        ),
+        label="Secret Passcode",
+        required=True,
+    )
+    
     class Meta:
         model = Project
         fields = [
@@ -28,6 +39,13 @@ class ProjectForm(ModelForm):
             "project_url": URLInput(attrs={"placeholder": "https://github.com/username/project"}),
             "project_image_url": URLInput(attrs={"placeholder": "https://drive.google.com/thumbnail?id=...&sz=w1000"}),
         }
+
+    def clean_secret_code(self):
+        code = self.cleaned_data.get("secret_code")
+        expected_code = settings.PORTFOLIO_SECRET_CODE
+        if expected_code and code != expected_code:
+            raise ValidationError("Kode otorisasi salah! Aksi dibatalkan.")
+        return code
 
 class SkillForm(ModelForm):
     secret_code = forms.CharField(
