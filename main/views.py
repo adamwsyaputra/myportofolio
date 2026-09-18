@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.core import serializers
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from main.forms import ProjectForm, SkillForm
+from main.forms import ExperienceForm, ProjectForm, SkillForm
 from main.models import Experience, Project, Skill
 from django.conf import settings
 
@@ -22,11 +22,61 @@ def show_main(request):
 
 # Experience field
 def show_experience(request):
+    category_query = request.GET.get("category", "").strip()
+    experiences = Experience.objects.all().order_by("-started_at")
+    if category_query:
+        experiences = experiences.filter(category=category_query)
     context = {
         "name": NAME,
-        "experience_list": Experience.objects.all(),
+        "experience_list": experiences,
+        "selected_category": category_query,
     }
     return render(request, "experience.html", context)
+
+def create_experience(request):
+    form = ExperienceForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Pengalaman baru berhasil ditambahkan!")
+        return redirect("main:show_experience")
+    
+    context = {
+        "name": NAME,
+        "form": form,
+        "action_title": "Add New Experience",
+        "btn_label": "Tambah Pengalaman",
+        "kicker": "TAMBAHKAN PENGALAMAN BARU",
+    }
+    return render(request, "experience_form.html", context)
+
+def update_experience(request, experience_id):
+    experience = get_object_or_404(Experience, pk=experience_id)
+    form = ExperienceForm(request.POST or None, instance=experience)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"Pengalaman {experience.title} berhasil diperbarui!")
+        return redirect("main:show_experience")
+
+    context = {
+        "name": NAME,
+        "form": form,
+        "action_title": f"Edit Experience: {experience.title}",
+        "btn_label": "Simpan Perubahan",
+        "kicker": "MANAGEMENT CONSOLE",
+    }
+    return render(request, "experience_form.html", context)
+
+def delete_experience(request, experience_id):
+    experience = get_object_or_404(Experience, pk=experience_id)
+    if request.method == "POST":
+        code = request.POST.get("secret_code", "")
+        expected_code = settings.PORTFOLIO_SECRET_CODE
+        if not expected_code or code == expected_code:
+            experience.delete()
+            messages.success(request, "Pengalaman berhasil dihapus!")
+        else:
+            messages.error(request, "Gagal menghapus: Kode rahasia salah!")
+    return redirect("main:show_experience")
 
 
 # Projects field

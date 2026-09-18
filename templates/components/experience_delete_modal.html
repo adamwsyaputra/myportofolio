@@ -1,0 +1,51 @@
+<button type="button"
+        class="comic-btn comic-btn-sm comic-btn-danger"
+        popovertarget="delete-exp-{{ experience.id }}"
+        aria-label="Hapus {{ experience.title }}"
+        title="Hapus pengalaman">
+  Hapus
+</button>
+
+<div id="delete-exp-{{ experience.id }}"
+     class="project-delete-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="delete-exp-title-{{ experience.id }}">
+  <button type="button"
+          class="project-delete-modal_backdrop"
+          popovertarget="delete-exp-{{ experience.id }}"
+          popovertargetaction="hide"
+          aria-label="Tutup konfirmasi hapus"></button>
+  <div class="project-delete-modal_content">
+    <button type="button"
+            class="project-delete-modal_close"
+            popovertarget="delete-exp-{{ experience.id }}"
+            popovertargetaction="hide"
+            aria-label="Tutup konfirmasi hapus">&times;</button>
+    <p class="hero-kicker" style="margin-bottom: 0.25rem;">CONFIRM ACTION</p>
+    <h2 id="delete-exp-title-{{ experience.id }}" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-bottom: 0.75rem;">Hapus Pengalaman?</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1.25rem;">
+      Apakah Anda yakin ingin menghapus pengalaman <strong>{{ experience.title }}</strong>?
+    </p>
+
+    <form method="post" action="{% url 'main:delete_experience' experience.id %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="code-exp-{{ experience.id }}">Masukkan Kode Rahasia:</label>
+        <input type="password"
+               id="code-exp-{{ experience.id }}"
+               name="secret_code"
+               placeholder="Enter passcode..."
+               required>
+      </div>
+      <div class="project-delete-modal_actions">
+        <button type="button"
+                class="comic-btn comic-btn-sm comic-btn-secondary"
+                popovertarget="delete-exp-{{ experience.id }}"
+                popovertargetaction="hide">Batal</button>
+        <button type="submit" class="comic-btn comic-btn-sm comic-btn-danger">Ya, Hapus</button>
+      </div>
+    </form>
+  </div>
+</div>

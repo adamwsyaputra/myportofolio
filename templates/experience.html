@@ -1,30 +1,77 @@
 {% extends 'base.html' %}
+
+{% block meta %}
+<title>Experience &middot; {{ name }}</title>
+{% endblock meta %}
+
 {% block content %}
-
-  <main>
-    <section class="experience-page-section">
-      <div class="container">
+<section class="experience-page-section">
+  <div class="container">
+    <div class="project-header">
+      <div>
         <p class="hero-kicker">MY JOURNEY SO FAR</p>
-        <h1 class="section-title">Experience</h1>
-        
-        <div class="experience-cards-grid">
-          {% for experience in experience_list %}
-            <article class="experience-card">
-              <span class="experience-category">{{ experience.get_category_display }}</span>
-              <h2>{{ experience.title }}</h2>
-              <p class="experience-description">{{ experience.description }}</p>
-              {% if experience.is_ongoing %}
-                <p class="experience-status ongoing">Sedang berlangsung</p>
-              {% else %}
-                <p class="experience-status completed">Selesai</p>
-              {% endif %}
-            </article>
-          {% empty %}
-            <p class="empty-state">Belum ada pengalaman yang ditambahkan.</p>
-          {% endfor %}
-        </div>
+        <h1 class="section-title" style="margin-bottom: 0;">Experience</h1>
       </div>
-    </section>
-  </main>
+      <a href="{% url 'main:create_experience' %}" class="comic-btn comic-btn-primary">
+        + Tambah Pengalaman
+      </a>
+    </div>
 
+    <!-- Category Filter Bar -->
+    <div class="comic-filter-bar">
+      <a href="{% url 'main:show_experience' %}" class="comic-filter-tab {% if not selected_category %}active{% endif %}">
+        All
+      </a>
+      <a href="{% url 'main:show_experience' %}?category=full-time" class="comic-filter-tab {% if selected_category == 'full-time' %}active{% endif %}">
+        Full-Time
+      </a>
+      <a href="{% url 'main:show_experience' %}?category=part-time" class="comic-filter-tab {% if selected_category == 'part-time' %}active{% endif %}">
+        Part-Time
+      </a>
+      <a href="{% url 'main:show_experience' %}?category=internship" class="comic-filter-tab {% if selected_category == 'internship' %}active{% endif %}">
+        Internship
+      </a>
+      <a href="{% url 'main:show_experience' %}?category=research" class="comic-filter-tab {% if selected_category == 'research' %}active{% endif %}">
+        Research
+      </a>
+      <a href="{% url 'main:show_experience' %}?category=volunteer" class="comic-filter-tab {% if selected_category == 'volunteer' %}active{% endif %}">
+        Volunteer
+      </a>
+      <a href="{% url 'main:show_experience' %}?category=freelance" class="comic-filter-tab {% if selected_category == 'freelance' %}active{% endif %}">
+        Freelance
+      </a>
+    </div>
+
+    <div class="experience-cards-grid">
+      {% for experience in experience_list %}
+        <article class="experience-card">
+          <div class="experience-card-topbar">
+            <span class="comic-category-tag">{{ experience.get_category_display }}</span>
+            {% if experience.is_ongoing %}
+              <span class="comic-badge-ongoing">&#9889; Sedang berlangsung</span>
+            {% else %}
+              <span class="comic-badge-completed">&#10003; Selesai</span>
+            {% endif %}
+          </div>
+          <h2>{{ experience.title }}</h2>
+          <p class="experience-description">{{ experience.description }}</p>
+
+          <div class="experience-card-actions">
+            <a href="{% url 'main:update_experience' experience.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
+              Edit
+            </a>
+            {% include "components/experience_delete_modal.html" with experience=experience %}
+          </div>
+        </article>
+      {% empty %}
+        <div class="comic-form-panel" style="grid-column: 1 / -1; max-width: 520px; text-align: center; margin: 3rem auto;">
+          <p class="hero-kicker">EMPTY JOURNEY</p>
+          <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 0.5rem;">Belum Ada Pengalaman</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Belum ada pengalaman yang ditambahkan.</p>
+          <a href="{% url 'main:create_experience' %}" class="comic-btn comic-btn-primary">+ Tambah Pengalaman Sekarang</a>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
 {% endblock content %}
