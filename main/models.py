@@ -38,3 +38,21 @@ class Project(models.Model):
 
     def __str__(self):
         return self.title
+
+class Skill(models.Model):
+    CATEGORY_CHOICES = [
+        ('languages', 'Programming Languages'),
+        ('frameworks', 'Frameworks & Tools'),
+        ('systems', 'Systems & Architecture'),
+        ('security', 'Cybersecurity & Networking'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='languages')
+    proficiency_percent = models.IntegerField(default=75)
+    is_core = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
