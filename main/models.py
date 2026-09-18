@@ -52,6 +52,7 @@ class Skill(models.Model):
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='languages')
     proficiency_percent = models.IntegerField(default=75)
     is_core = models.BooleanField(default=False)
+    logo_url = models.URLField(blank=True, null=True, max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
