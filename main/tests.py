@@ -50,6 +50,64 @@ class MainTest(TestCase):
         self.assertContains(response, "Selesai")
         self.assertNotContains(response, "Sedang berlangsung")
 
+    def test_experience_page_contains_edit_link(self):
+        response = self.client.get(reverse("main:show_experience"))
+        self.assertEqual(response.status_code, 200)
+        edit_url = reverse("main:update_experience", args=[self.experience.id])
+        self.assertContains(response, f'href="{edit_url}"')
+
+    def test_create_experience_get(self):
+        response = self.client.get(reverse("main:create_experience"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "experience_form.html")
+
+    def test_create_experience_post_valid(self):
+        from django.conf import settings
+        payload = {
+            "title": "Backend Intern",
+            "category": "internship",
+            "description": "Building microservices with Django and FastAPI.",
+            "thumbnail": "",
+            "is_ongoing": "on",
+            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
+        }
+        response = self.client.post(reverse("main:create_experience"), payload)
+        self.assertRedirects(response, reverse("main:show_experience"))
+        self.assertTrue(Experience.objects.filter(title="Backend Intern").exists())
+
+    def test_update_experience_get(self):
+        edit_url = reverse("main:update_experience", args=[self.experience.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "experience_form.html")
+        self.assertContains(response, self.experience.title)
+
+    def test_update_experience_post_valid(self):
+        from django.conf import settings
+        edit_url = reverse("main:update_experience", args=[self.experience.id])
+        payload = {
+            "title": "Koordinator Asisten Dosen PBP",
+            "category": "part-time",
+            "description": "Memimpin tim asisten dosen pengembangan web.",
+            "thumbnail": "",
+            "is_ongoing": "on",
+            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
+        }
+        response = self.client.post(edit_url, payload)
+        self.assertRedirects(response, reverse("main:show_experience"))
+        self.experience.refresh_from_db()
+        self.assertEqual(self.experience.title, "Koordinator Asisten Dosen PBP")
+
+    def test_delete_experience_post_valid(self):
+        from django.conf import settings
+        delete_url = reverse("main:delete_experience", args=[self.experience.id])
+        payload = {
+            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
+        }
+        response = self.client.post(delete_url, payload)
+        self.assertRedirects(response, reverse("main:show_experience"))
+        self.assertFalse(Experience.objects.filter(id=self.experience.id).exists())
+
 
 class ProjectTest(TestCase):
     def setUp(self):
@@ -81,3 +139,48 @@ class ProjectTest(TestCase):
 
     def test_project_model_str(self):
         self.assertEqual(str(self.project), "EduText AI")
+
+    def test_projects_page_contains_edit_link(self):
+        response = self.client.get(reverse("main:show_projects"))
+        self.assertEqual(response.status_code, 200)
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        self.assertContains(response, f'href="{edit_url}"')
+
+    def test_update_project_get(self):
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "projects_form.html")
+        self.assertContains(response, self.project.title)
+        self.assertContains(response, "Edit Project:")
+
+    def test_update_project_post_valid(self):
+        from django.conf import settings
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        payload = {
+            "title": "EduText AI Updated",
+            "description": "Updated description for AI SMS.",
+            "tech_stack": "Python, Django, Telephony",
+            "project_url": "https://github.com/adamwsyaputra/updated",
+            "project_image_url": "",
+            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
+        }
+        response = self.client.post(edit_url, payload)
+        self.assertRedirects(response, reverse("main:show_projects"))
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.title, "EduText AI Updated")
+
+    def test_update_project_post_invalid_passcode(self):
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        payload = {
+            "title": "Hacked Title",
+            "description": "Hacked description.",
+            "tech_stack": "Hacked",
+            "project_url": "https://hacked.com",
+            "project_image_url": "",
+            "secret_code": "wrong_passcode_xyz",
+        }
+        response = self.client.post(edit_url, payload)
+        self.assertEqual(response.status_code, 200)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.title, "EduText AI")

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block meta %}
+<title>Skills &middot; {{ name }}</title>
+{% endblock meta %}
+
+{% block content %}
+<section class="experience-page-section">
+  <div class="container">
+    <div class="project-header">
+      <div>
+        <p class="hero-kicker">TECHNICAL SKILLS</p>
+        <h1 class="section-title">Skills & Capabilities</h1>
+      </div>
+      <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">
+        + Tambah Skill
+      </a>
+    </div>
+
+    <!-- Category Filter Bar -->
+    <div class="comic-filter-bar">
+      <a href="{% url 'main:show_skills' %}" class="comic-filter-tab {% if not selected_category %}active{% endif %}">
+        All
+      </a>
+      <a href="{% url 'main:show_skills' %}?category=languages" class="comic-filter-tab {% if selected_category == 'languages' %}active{% endif %}">
+        Programming Languages
+      </a>
+      <a href="{% url 'main:show_skills' %}?category=frameworks" class="comic-filter-tab {% if selected_category == 'frameworks' %}active{% endif %}">
+        Frameworks & Tools
+      </a>
+      <a href="{% url 'main:show_skills' %}?category=systems" class="comic-filter-tab {% if selected_category == 'systems' %}active{% endif %}">
+        Systems & Architecture
+      </a>
+      <a href="{% url 'main:show_skills' %}?category=security" class="comic-filter-tab {% if selected_category == 'security' %}active{% endif %}">
+        Cybersecurity & Networking
+      </a>
+    </div>
+
+    <div class="skills-grid">
+      {% for skill in skill_list %}
+        <article class="skill-card">
+          <div class="skill-card-topbar">
+            <span class="comic-category-tag">{{ skill.get_category_display }}</span>
+            {% if skill.is_core %}
+              <span class="comic-badge-core">&#9733; CORE</span>
+            {% endif %}
+          </div>
+
+          <div class="skill-identity">
+            {% if skill.logo_url %}
+              <div class="skill-logo-frame">
+                <img src="{{ skill.logo_url }}" alt="{{ skill.name }}" loading="lazy">
+              </div>
+            {% else %}
+              <div class="skill-logo-frame">
+                <div class="skill-logo-fallback">
+                  {{ skill.name|slice:":2"|upper }}
+                </div>
+              </div>
+            {% endif %}
+            <div class="skill-title-block">
+              <h2 class="skill-name">{{ skill.name }}</h2>
+            </div>
+          </div>
+
+          <div class="comic-power-box">
+            <div class="comic-power-meta">
+              <span class="comic-stat-label">PROFICIENCY</span>
+              <span class="comic-stat-val">{{ skill.proficiency_percent }}%</span>
+            </div>
+            <div class="comic-power-track" title="{{ skill.proficiency_percent }}% Proficiency">
+              <div class="comic-power-fill" style="width: {{ skill.proficiency_percent }}%;"></div>
+            </div>
+          </div>
+
+          <div class="skill-card-actions">
+            <a href="{% url 'main:update_skill' skill.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
+              Edit
+            </a>
+            {% include "components/skill_delete_modal.html" with skill=skill %}
+          </div>
+        </article>
+      {% empty %}
+        <div class="comic-form-panel" style="grid-column: 1 / -1; max-width: 520px; text-align: center; margin: 3rem auto;">
+          <p class="hero-kicker">EMPTY ARSENAL</p>
+          <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 0.5rem;">Belum Ada Keahlian</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Tambahkan keahlian pertama Anda untuk melengkapi Technical Arsenal.</p>
+          <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">+ Tambah Skill Sekarang</a>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock content %}

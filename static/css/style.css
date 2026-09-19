@@ -149,24 +149,39 @@ h1, h2, h3, .brand {
 
 .social-links {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .social-link {
-  display: inline-block;
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Space Grotesk", -apple-system, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-decoration: none;
-  color: var(--paper);
-  background-color: var(--ink);
+  color: var(--ink);
+  background-color: #ffffff;
+  border: 2.5px solid var(--ink);
   border-radius: var(--radius);
-  padding: 0.5rem 1.1rem;
-  transition: background-color 0.2s ease;
+  padding: 0.5rem 1.15rem;
+  box-shadow: 3.5px 3.5px 0 var(--accent);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  cursor: pointer;
 }
 
 .social-link:hover {
-  background-color: var(--accent);
+  background-color: var(--paper);
+  color: var(--ink);
+  transform: translate(-2px, -2px);
+  box-shadow: 5.5px 5.5px 0 var(--accent);
+}
+
+.social-link:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--accent);
 }
 
 .hero-photo {
@@ -211,35 +226,49 @@ h1, h2, h3, .brand {
   letter-spacing: -0.03em;
 }
 
-.skills-grid {
+.skills-section .skills-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
+  margin-top: 0;
 }
 
-.skill-card {
+.skills-section .skill-card {
+  position: relative;
   background: var(--paper);
   border: 3px solid var(--ink);
   padding: 1.75rem 1.5rem;
   border-radius: var(--radius);
   box-shadow: 5px 5px 0 var(--ink);
+  display: block;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.skill-card:hover {
-  transform: translateY(-4px);
+.skills-section .skill-card:hover {
   box-shadow: 7px 7px 0 var(--accent);
 }
 
-.tilt-left {
+.skills-section .tilt-left {
   transform: rotate(-1deg);
 }
 
-.tilt-right {
+.skills-section .tilt-left:hover {
+  transform: rotate(-1deg) translateY(-4px);
+}
+
+.skills-section .skill-card:not(.tilt-left):not(.tilt-right):hover {
+  transform: translateY(-4px);
+}
+
+.skills-section .tilt-right {
   transform: rotate(1deg);
 }
 
-.card-badge {
+.skills-section .tilt-right:hover {
+  transform: rotate(1deg) translateY(-4px);
+}
+
+.skills-section .card-badge {
   display: inline-block;
   background: var(--accent);
   color: #fff;
@@ -297,7 +326,7 @@ h1, h2, h3, .brand {
   text-transform: uppercase;
   writing-mode: vertical-rl;
   padding: 1.5rem 0.25rem;
-  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.15s ease;
 }
 
 .projects-vertical-btn:hover {
@@ -305,6 +334,11 @@ h1, h2, h3, .brand {
   color: #ffffff;
   transform: translateY(-4px);
   box-shadow: 7px 7px 0 var(--ink);
+}
+
+.projects-vertical-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
 }
 
 .projects-vertical-btn .btn-arrow {
@@ -393,6 +427,41 @@ h1, h2, h3, .brand {
   font-weight: 600;
   padding: 0.2rem 0.55rem;
   border-radius: 2px;
+}
+
+/* Projects Page Layout & Card Actions */
+.projects-section .container {
+  max-width: 1040px;
+}
+
+.projects-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.5rem;
+}
+
+.project-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: auto;
+  padding-top: 1.25rem;
+  border-top: 2px dashed var(--line);
+}
+
+.project-card-actions_manage {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.project-card-actions .comic-btn-sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 /* --- Section 4: Experience--- */
@@ -536,12 +605,18 @@ h1, h2, h3, .brand {
   font-weight: 700;
   text-decoration: none;
   box-shadow: 5px 5px 0 var(--accent);
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .contact-button:hover {
   background-color: var(--paper);
   transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--accent);
+}
+
+.contact-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--accent);
 }
 
 .contact-arrow {
@@ -583,18 +658,23 @@ h1, h2, h3, .brand {
   background-size: 20px 20px;
 }
 
+.experience-page-section .container {
+  max-width: 1040px;
+}
+
 .experience-cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.75rem;
+  margin-top: 1.75rem;
 }
 
 .experience-card {
   background-color: var(--surface);
   border: 3px solid var(--ink);
   border-radius: var(--radius);
-  padding: 1.75rem 1.5rem;
-  box-shadow: 5px 5px 0 var(--ink);
+  padding: 1.5rem;
+  box-shadow: 6px 6px 0 var(--ink);
   display: flex;
   flex-direction: column;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -602,28 +682,58 @@ h1, h2, h3, .brand {
 
 .experience-card:hover {
   transform: translateY(-4px);
-  box-shadow: 7px 7px 0 var(--accent);
+  box-shadow: 8px 8px 0 var(--accent);
 }
 
-.experience-category {
-  display: inline-block;
-  align-self: flex-start;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 0.25rem 0.6rem;
-  border-radius: 2px;
-  margin-bottom: 1rem;
+.experience-card-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.15rem;
+}
+
+.comic-badge-ongoing {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  background: var(--accent);
+  color: #ffffff;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  padding: 0.22rem 0.6rem;
+  box-shadow: 2px 2px 0 var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.comic-badge-completed {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--paper);
+  color: var(--text-muted);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  padding: 0.22rem 0.6rem;
+  box-shadow: 2px 2px 0 var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .experience-card h2 {
-  font-size: 1.25rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
   margin-bottom: 0.75rem;
   color: var(--ink);
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .experience-description {
@@ -634,61 +744,279 @@ h1, h2, h3, .brand {
   flex-grow: 1;
 }
 
-.experience-status {
+.experience-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.65rem;
   margin-top: auto;
-  font-family: "Courier New", monospace;
-  font-size: 0.85rem;
-  font-weight: 700;
   padding-top: 1rem;
-  border-top: 1px dashed var(--line);
+  border-top: 2px dashed var(--line);
 }
 
-.experience-status.ongoing {
-  color: var(--accent-dark);
+/* --- Comic Buttons System --- */
+.comic-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: "Space Grotesk", -apple-system, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 0.6rem 1.25rem;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease, color 0.15s ease;
+  user-select: none;
 }
 
-.experience-status.completed {
-  color: var(--text-muted);
+.comic-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--ink);
 }
 
-/* --- Form Styling --- */
+.comic-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.comic-btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.comic-btn-primary:hover {
+  background: var(--accent-dark);
+  color: #ffffff;
+}
+
+.comic-btn-dark {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.comic-btn-dark:hover {
+  background: #332f2b;
+  color: #ffffff;
+}
+
+.comic-btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.comic-btn-secondary:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.comic-btn-danger {
+  background: #d32f2f;
+  color: #ffffff;
+}
+
+.comic-btn-danger:hover {
+  background: #b71c1c;
+  color: #ffffff;
+}
+
+.comic-btn-sm {
+  padding: 0.38rem 0.85rem;
+  font-size: 0.78rem;
+  border-width: 2px;
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+}
+
+.comic-btn-sm:hover {
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.comic-btn-sm:active {
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+/* --- Form Styling & Comic Inputs --- */
 .project-form {
   margin-top: 1.5rem;
 }
 
 .form-group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.35rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.45rem;
+  font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
+  letter-spacing: 0.02em;
 }
 
-.form-group input,
-.form-group textarea {
+.form-group input:not([type="checkbox"]),
+.form-group textarea,
+.form-group select {
   width: 100%;
-  padding: 0.75rem;
-  border: 2px solid var(--ink);
+  padding: 0.75rem 1rem;
+  border: 2.5px solid var(--ink);
   border-radius: var(--radius);
   background: var(--surface);
-  font: inherit;
+  font-family: inherit;
   font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
+.form-group input:not([type="checkbox"]):focus,
+.form-group textarea:focus,
+.form-group select:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--ink);
   box-shadow: 4px 4px 0 var(--accent);
+}
+
+.form-group select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'%3E%3Cpath fill='%231c1917' d='M7 10L0 0h14z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.25rem center;
+  background-size: 11px;
+  padding-right: 2.5rem;
 }
 
 .form-error {
   color: #b42318;
   font-size: 0.85rem;
+  font-weight: 600;
   margin-top: 0.35rem;
+}
+
+/* Custom Comic Checkbox Card */
+.comic-checkbox-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.25rem;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  margin-top: 0.4rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.comic-checkbox-card:hover {
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4.5px 4.5px 0 var(--accent);
+}
+
+.comic-checkbox-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--ink);
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+  flex-shrink: 0;
+  margin: 0;
+  transition: background-color 0.15s ease;
+}
+
+.comic-checkbox-input::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  transform: scale(0);
+  background-color: #ffffff;
+  clip-path: polygon(14% 44%, 0 60%, 40% 100%, 100% 18%, 82% 0%, 38% 66%);
+  transition: transform 0.12s ease-in-out;
+}
+
+.comic-checkbox-input:checked {
+  background-color: var(--accent);
+  border-color: var(--ink);
+}
+
+.comic-checkbox-input:checked::before {
+  transform: scale(1.1);
+}
+
+.comic-checkbox-text {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.comic-checkbox-hint {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+/* --- Comic Dossier / Management Console Form Panel --- */
+.comic-form-panel {
+  max-width: 680px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 3.5px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 8px 8px 0 var(--ink);
+  padding: 2.5rem 2.5rem 2.75rem;
+  position: relative;
+}
+
+.comic-form-header {
+  border-bottom: 2.5px solid var(--ink);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.comic-badge-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--ink);
+  color: #ffffff;
+  padding: 0.35rem 0.75rem;
+  border-radius: 2px;
+  margin-bottom: 0.75rem;
+}
+
+.comic-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.comic-dot.red { background: #ff5f56; }
+.comic-dot.yellow { background: #ffbd2e; }
+.comic-dot.green { background: #27c93f; }
+
+.comic-header-tag {
+  font-family: "Space Grotesk", monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
 }
 
 /* --- Project Search & Header Bar --- */
@@ -764,7 +1092,7 @@ h1, h2, h3, .brand {
   width: min(100%, 460px);
   padding: 2rem;
   background: var(--paper);
-  border: 3px solid var(--ink);
+  border: 3.5px solid var(--ink);
   box-shadow: 8px 8px 0 var(--accent);
   border-radius: var(--radius);
 }
@@ -790,6 +1118,250 @@ h1, h2, h3, .brand {
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1.5rem;
+}
+
+/* --- Comic Category Filter Bar --- */
+.comic-filter-bar {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.comic-filter-tab {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  padding: 0.45rem 0.95rem;
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.comic-filter-tab:hover {
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4px 4px 0 var(--accent);
+  color: var(--ink);
+}
+
+.comic-filter-tab.active {
+  background: var(--ink);
+  color: #ffffff;
+  box-shadow: 3.5px 3.5px 0 var(--accent);
+}
+
+/* --- Dedicated Skills Page (/skills/) --- */
+.experience-page-section .skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.75rem;
+  margin-top: 1.75rem;
+}
+
+.experience-page-section .skill-card {
+  position: relative;
+  background-color: var(--surface);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: 6px 6px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.experience-page-section .skill-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 8px 8px 0 var(--accent);
+}
+
+/* Comic Badges Topbar */
+.skill-card-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.15rem;
+}
+
+.comic-category-tag {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  padding: 0.22rem 0.6rem;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.comic-badge-core {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: #ffffff;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  padding: 0.22rem 0.6rem;
+  box-shadow: 2px 2px 0 var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Skill Identity Block */
+.skill-identity {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.skill-logo-frame {
+  width: 58px;
+  height: 58px;
+  background: #ffffff;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 3.5px 3.5px 0 var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.skill-logo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px;
+}
+
+.skill-logo-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  color: #ffffff;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: 0.05em;
+}
+
+.skill-title-block {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.skill-name {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+/* Comic Power Bar / Stat Meter */
+.comic-power-box {
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.comic-power-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+
+.comic-stat-label {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.comic-stat-val {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  padding: 0.1rem 0.45rem;
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+}
+
+.comic-power-track {
+  width: 100%;
+  height: 18px;
+  background-color: #f6f1e8;
+  background-image: radial-gradient(rgba(28, 25, 23, 0.22) 1px, transparent 1px);
+  background-size: 6px 6px;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 2px 2px 0 var(--ink);
+  position: relative;
+}
+
+.comic-power-fill {
+  height: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--accent),
+    var(--accent) 8px,
+    #e8704c 8px,
+    #e8704c 16px
+  );
+  border-right: 2px solid var(--ink);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Skill Card Actions */
+.skill-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 2px dashed var(--line);
+}
+
+/* Form Container Scaffolding */
+.form-card-container {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.form-actions-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
 }
 
 /* --- Mobile Responsiveness --- */
@@ -826,15 +1398,23 @@ h1, h2, h3, .brand {
     padding: 3.5rem 0;
   }
 
+  .skills-section .skills-grid,
   .skills-grid,
   .projects-grid {
     grid-template-columns: 1fr;
     gap: 1.25rem;
   }
 
+  .skills-section .tilt-left,
+  .skills-section .tilt-right,
   .tilt-left,
   .tilt-right {
     transform: none;
+  }
+
+  .skills-section .tilt-left:hover,
+  .skills-section .tilt-right:hover {
+    transform: translateY(-4px);
   }
 
   .exp-grid {
@@ -921,5 +1501,19 @@ h1, h2, h3, .brand {
 
   .projects-vertical-btn:hover .btn-arrow {
     transform: translateX(4px);
+  }
+
+  .projects-vertical-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--accent);
+  }
+
+  .skills-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  .form-actions-group {
+    flex-direction: column;
   }
 }

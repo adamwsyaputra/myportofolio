@@ -1,0 +1,40 @@
+<button type="button"
+        class="comic-btn comic-btn-sm comic-btn-danger"
+        popovertarget="delete-skill-{{ skill.id }}"
+        aria-label="Hapus {{ skill.name }}">
+  Hapus
+</button>
+
+<div id="delete-skill-{{ skill.id }}"
+     class="project-delete-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true">
+  <button type="button"
+          class="project-delete-modal_backdrop"
+          popovertarget="delete-skill-{{ skill.id }}"
+          popovertargetaction="hide"></button>
+  <div class="project-delete-modal_content">
+    <button type="button"
+            class="project-delete-modal_close"
+            popovertarget="delete-skill-{{ skill.id }}"
+            popovertargetaction="hide">&times;</button>
+    <p class="hero-kicker" style="margin-bottom: 0.25rem;">CONFIRM ACTION</p>
+    <h2 style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-bottom: 0.75rem;">Hapus Skill?</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1.25rem;">Apakah Anda yakin ingin menghapus keahlian <strong>{{ skill.name }}</strong>?</p>
+    <form method="post" action="{% url 'main:delete_skill' skill.id %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="code-{{ skill.id }}">Masukkan Kode Rahasia:</label>
+        <input type="password" id="code-{{ skill.id }}" name="secret_code" placeholder="Enter passcode..." required>
+      </div>
+      <div class="project-delete-modal_actions">
+        <button type="button"
+                class="comic-btn comic-btn-sm comic-btn-secondary"
+                popovertarget="delete-skill-{{ skill.id }}"
+                popovertargetaction="hide">Batal</button>
+        <button type="submit" class="comic-btn comic-btn-sm comic-btn-danger">Konfirmasi Hapus</button>
+      </div>
+    </form>
+  </div>
+</div>

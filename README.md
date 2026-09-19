@@ -77,9 +77,9 @@ Buka `http://localhost:8000` pada peramban web Anda.
 - [x] **Minggu 2**
   - [x] Tutorial 02: Implementasi Model-View-Template (MVT) pada Django
   - [x] Individual Assignment 2: Dynamic Portfolio Sections with Models & Views
-- [ ] **Minggu 3**
-  - [ ] Tutorial 03
-  - [ ] Individual Assignment 3
+- [x] **Minggu 3**
+  - [x] Tutorial 03
+  - [x] Individual Assignment 3
 - [ ] **Minggu 4**
   - [ ] Tutorial 04
   - [ ] Individual Assignment 4
@@ -101,3 +101,4 @@ Dokumentasi lengkap terkait jawaban pertanyaan reflektif, analisis keterbatasan 
 
 * [📄 **Individual Assignment 1 Documentation**](docs/assignment-1.md)
 * [📄 **Individual Assignment 2 Documentation**](docs/assignment-2.md)
+* [📄 **Individual Assignment 3 Documentation**](docs/assignment-3.md)
