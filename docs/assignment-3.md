@@ -23,14 +23,17 @@ Proses serialization pada model Django mutlak diperlukan karena instansiasi obje
 
 ### Pengungkapan Penggunaan AI (AI Disclosure)
 
-* **Alat yang Digunakan**: Google Gemini (digunakan asisten untuk konsultasi, troubleshooting environment, dan pembuatan skenario pengujian) dan Antigravity (digunakan untuk me-review codebase dan memperbaiki kekurangan dari gemini)
+* **Alat yang Digunakan**: Google Gemini (digunakan sebagai asisten untuk konsultasi alur logika, troubleshooting environment, dan perancangan skenario pengujian) dan Antigravity (digunakan untuk audit codebase dan debugging presisi).
 * **Tautan Log Percakapan**: [Lihat Log Percakapan Lengkap](https://share.gemini.google/vwciRiQa4CYV)
 
 #### Strategi Prompting
-**1. Incremental Step-by-Step Prompting**: Memecah alur pengerjaan menjadi tahapan modular yang terisolasi. Proses dimulai dari definisi model Skill dan migrasi skema, pembuatan SkillForm, penyusunan logika views CRUD dan endpoint JSON, hingga replikasi sistem otorisasi ke entitas Project dan Experience secara bertahap untuk mencegah terjadinya regresi kode.   
-**2. Setup dengan pergantian device**: Mengarahkan AI secara terstruktur saat berganti perangkat kerja antara PC dan laptop. Prompt difokuskan pada penyelarasan branch Git, penanganan remote deployment PWS, penanganan masalah versi Python lokal, serta sinkronisasi skema basis data SQLite lokal dengan PostgreSQL produksi.
+1. **Incremental Step-by-Step Prompting**: Memecah alur pengerjaan menjadi tahapan modular yang terisolasi. Proses dimulai dari definisi model `Skill` dan migrasi skema, pembuatan `SkillForm`, penyusunan logika views CRUD dan endpoint JSON, hingga replikasi sistem otorisasi ke entitas `Project` dan `Experience` secara bertahap untuk mencegah terjadinya regresi kode.
+2. **Setup Lintas Perangkat (Cross-Device)**: Mengarahkan AI secara terstruktur saat berganti lingkungan kerja antara PC dan laptop. Prompt difokuskan pada penyelarasan branch Git, penanganan remote deployment PWS, penyelarasan versi Python lokal, serta sinkronisasi skema basis data SQLite lokal dengan PostgreSQL produksi.
 
-#### Keterbatasan AI
-Gemini sudah mulai kehilangan context setelah penggunaan satu chat selama 3 minggu, sudah terlihat dengan signifikakn penurunan performa dan akurasi semakin lama chat digunakan dan setelah assignment-3 sudah tidak dapat secara reliable membantu dengan code yang masih "nyambung" dengan codebase. Meskipun begitu Gemini masih memiliki konteks yang lengkap tentang penugasan secara general. Gemini juga mengkompromi security situs dengan menaruh password didalam setting.py yang akan di push ke git.
+#### Analisis Keterbatasan AI & Perbaikan Manual
+Setelah penggunaan satu sesi percakapan secara intensif selama 3 minggu, model AI (Gemini) mulai mengalami penurunan retensi konteks (*context drift*). Penurunan performa dan akurasi terlihat signifikan pada pengerjaan Assignment 3, di mana AI mulai menghasilkan potongan kode yang kurang selaras (*out-of-sync*) dengan arsitektur codebase yang sudah ada. Selain itu, terdapat isu keamanan kritis di mana AI sempat menyarankan penulisan kredensial/kode otorisasi langsung di dalam `settings.py` yang berisiko terunggah ke repositori Git publik.
 
-Saya sekarang kebanyakan memodifikasi manual dan dengan bantuan Antigravity untuk kebanyakan bagian coding, dan saya juga telah streamline beberapa elemen css yang berulang seperi button agar lebih reusable. Saya memindadhkan password sekarang purely didalam .env.
+Menanggapi keterbatasan tersebut, berikut perbaikan manual dan penyesuaian independen yang saya lakukan:
+* **Keamanan & Secrets Management**: Memisahkan kredensial sensitif dan `PORTFOLIO_SECRET_CODE` sepenuhnya ke dalam berkas environment `.env` agar tidak bocor ke *version control*.
+* **Refactoring CSS & Komponen**: Menstandarisasi elemen antarmuka yang repetitif, seperti menyatukan styling tombol komik (`comic-btn`) agar modular dan *reusable* di berbagai halaman.
+* **Audit & Debugging Kode**: Mengoreksi logika validasi otorisasi form secara mandiri dan mengoptimalkan penanganan deserialisasi data agar alur MVT tetap bersih dan konsisten.
