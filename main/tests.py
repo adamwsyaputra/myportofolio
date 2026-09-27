@@ -482,5 +482,25 @@ class SkillTest(TestCase):
         self.assertFalse(Skill.objects.filter(id=self.skill.id).exists())
 
 
+class RoleArchitectureTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Group, User
+        self.editor_group = Group.objects.create(name="Editor")
+        self.regular_user = User.objects.create_user(username="regular_role", password="Password123!")
+        self.editor_user = User.objects.create_user(username="editor_role", password="Password123!")
+        self.editor_user.groups.add(self.editor_group)
+        self.superuser = User.objects.create_superuser(username="admin_role", password="Password123!")
+
+    def test_is_editor_helper(self):
+        from django.contrib.auth.models import AnonymousUser
+        from main.views import is_editor
+
+        self.assertFalse(is_editor(AnonymousUser()))
+        self.assertFalse(is_editor(self.regular_user))
+        self.assertTrue(is_editor(self.editor_user))
+        self.assertTrue(is_editor(self.superuser))
+
+
+
 
 

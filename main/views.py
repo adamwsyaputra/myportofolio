@@ -12,6 +12,16 @@ from main.models import Experience, Project, Skill
 
 NAME = "Adam Wahyu Syaputra"
 
+def is_editor(user):
+    """
+    Verify if an account is an editor.
+    Superusers have implicit editor privileges.
+    """
+    return user.is_authenticated and (user.is_superuser or user.groups.filter(name="Editor").exists())
+
+is_editor_or_superuser = is_editor
+
+
 def show_main(request):
     context = {
         "name": NAME,
