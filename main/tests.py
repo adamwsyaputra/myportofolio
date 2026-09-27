@@ -1,10 +1,17 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from main.models import Experience, Project
+from main.models import Experience, Project, Skill
 
 class MainTest(TestCase):
     def setUp(self):
+        from django.contrib.auth.models import Group, User
+        self.editor_group = Group.objects.create(name="Editor")
+        self.regular_user = User.objects.create_user(username="regular_exp", password="RegularPassword123!")
+        self.editor_user = User.objects.create_user(username="editor_exp", password="EditorPassword123!")
+        self.editor_user.groups.add(self.editor_group)
+        self.superuser = User.objects.create_superuser(username="admin_exp", password="AdminPassword123!")
+
         self.experience = Experience.objects.create(
             title="Asisten Dosen PBP",
             description="Membantu mahasiswa memahami pengembangan web.",
@@ -50,63 +57,121 @@ class MainTest(TestCase):
         self.assertContains(response, "Selesai")
         self.assertNotContains(response, "Sedang berlangsung")
 
-    def test_experience_page_contains_edit_link(self):
+    def test_experience_page_anonymous_controls(self):
         response = self.client.get(reverse("main:show_experience"))
         self.assertEqual(response.status_code, 200)
         edit_url = reverse("main:update_experience", args=[self.experience.id])
-        self.assertContains(response, f'href="{edit_url}"')
+        self.assertNotContains(response, f'href="{edit_url}"')
+        self.assertNotContains(response, "+ Tambah Pengalaman")
+        self.assertNotContains(response, f'popovertarget="delete-exp-{self.experience.id}"')
+        vouch_url = reverse("main:toggle_vouch_experience", args=[self.experience.id])
+        self.assertContains(response, f'action="{vouch_url}"')
 
-    def test_create_experience_get(self):
+    def test_create_experience_anonymous_redirects(self):
+        response = self.client.get(reverse("main:create_experience"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_create_experience_non_superuser_forbidden(self):
+        self.client.login(username="regular_exp", password="RegularPassword123!")
+        response = self.client.get(reverse("main:create_experience"))
+        self.assertEqual(response.status_code, 403)
+
+        self.client.login(username="editor_exp", password="EditorPassword123!")
+        response_ed = self.client.get(reverse("main:create_experience"))
+        self.assertEqual(response_ed.status_code, 403)
+
+    def test_create_experience_superuser_allowed(self):
+        self.client.login(username="admin_exp", password="AdminPassword123!")
         response = self.client.get(reverse("main:create_experience"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience_form.html")
 
-    def test_create_experience_post_valid(self):
-        from django.conf import settings
         payload = {
             "title": "Backend Intern",
             "category": "internship",
             "description": "Building microservices with Django and FastAPI.",
             "thumbnail": "",
             "is_ongoing": "on",
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
         }
-        response = self.client.post(reverse("main:create_experience"), payload)
-        self.assertRedirects(response, reverse("main:show_experience"))
+        post_response = self.client.post(reverse("main:create_experience"), payload)
+        self.assertRedirects(post_response, reverse("main:show_experience"))
         self.assertTrue(Experience.objects.filter(title="Backend Intern").exists())
 
-    def test_update_experience_get(self):
+    def test_update_experience_anonymous_redirects(self):
+        edit_url = reverse("main:update_experience", args=[self.experience.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_update_experience_regular_forbidden(self):
+        self.client.login(username="regular_exp", password="RegularPassword123!")
+        edit_url = reverse("main:update_experience", args=[self.experience.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_update_experience_editor_allowed(self):
+        self.client.login(username="editor_exp", password="EditorPassword123!")
         edit_url = reverse("main:update_experience", args=[self.experience.id])
         response = self.client.get(edit_url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience_form.html")
         self.assertContains(response, self.experience.title)
 
-    def test_update_experience_post_valid(self):
-        from django.conf import settings
-        edit_url = reverse("main:update_experience", args=[self.experience.id])
         payload = {
             "title": "Koordinator Asisten Dosen PBP",
             "category": "part-time",
             "description": "Memimpin tim asisten dosen pengembangan web.",
             "thumbnail": "",
             "is_ongoing": "on",
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
         }
-        response = self.client.post(edit_url, payload)
-        self.assertRedirects(response, reverse("main:show_experience"))
+        post_response = self.client.post(edit_url, payload)
+        self.assertRedirects(post_response, reverse("main:show_experience"))
         self.experience.refresh_from_db()
         self.assertEqual(self.experience.title, "Koordinator Asisten Dosen PBP")
 
-    def test_delete_experience_post_valid(self):
-        from django.conf import settings
+    def test_delete_experience_anonymous_redirects(self):
         delete_url = reverse("main:delete_experience", args=[self.experience.id])
-        payload = {
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
-        }
-        response = self.client.post(delete_url, payload)
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_delete_experience_regular_and_editor_forbidden(self):
+        delete_url = reverse("main:delete_experience", args=[self.experience.id])
+
+        self.client.login(username="regular_exp", password="RegularPassword123!")
+        response_reg = self.client.post(delete_url)
+        self.assertEqual(response_reg.status_code, 403)
+
+        self.client.login(username="editor_exp", password="EditorPassword123!")
+        response_ed = self.client.post(delete_url)
+        self.assertEqual(response_ed.status_code, 403)
+
+    def test_delete_experience_superuser_allowed(self):
+        self.client.login(username="admin_exp", password="AdminPassword123!")
+        delete_url = reverse("main:delete_experience", args=[self.experience.id])
+        response = self.client.post(delete_url)
         self.assertRedirects(response, reverse("main:show_experience"))
         self.assertFalse(Experience.objects.filter(id=self.experience.id).exists())
+
+    def test_toggle_vouch_experience(self):
+        vouch_url = reverse("main:toggle_vouch_experience", args=[self.experience.id])
+
+        # Anonymous cannot vouch
+        anon_resp = self.client.post(vouch_url)
+        self.assertEqual(anon_resp.status_code, 302)
+        self.assertIn("/login/", anon_resp.url)
+
+        # Regular user can vouch
+        self.client.login(username="regular_exp", password="RegularPassword123!")
+        post_resp = self.client.post(vouch_url)
+        self.assertRedirects(post_resp, reverse("main:show_experience"))
+        self.assertTrue(self.experience.vouched_by.filter(id=self.regular_user.id).exists())
+
+        # Unvouch
+        post_resp2 = self.client.post(vouch_url)
+        self.assertRedirects(post_resp2, reverse("main:show_experience"))
+        self.assertFalse(self.experience.vouched_by.filter(id=self.regular_user.id).exists())
 
 
 class ProjectTest(TestCase):
@@ -162,7 +227,6 @@ class ProjectTest(TestCase):
         self.assertContains(response, "Edit Project:")
 
     def test_update_project_post_valid(self):
-        from django.conf import settings
         self.client.login(username="admin_proj", password="AdminPassword123!")
         edit_url = reverse("main:update_project", args=[self.project.id])
         payload = {
@@ -171,24 +235,21 @@ class ProjectTest(TestCase):
             "tech_stack": "Python, Django, Telephony",
             "project_url": "https://github.com/adamwsyaputra/updated",
             "project_image_url": "",
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
         }
         response = self.client.post(edit_url, payload)
         self.assertRedirects(response, reverse("main:show_projects"))
         self.project.refresh_from_db()
         self.assertEqual(self.project.title, "EduText AI Updated")
 
-    def test_update_project_post_invalid_passcode(self):
-        from django.conf import settings
+    def test_update_project_post_invalid_data(self):
         self.client.login(username="admin_proj", password="AdminPassword123!")
         edit_url = reverse("main:update_project", args=[self.project.id])
         payload = {
-            "title": "Hacked Title",
+            "title": "",
             "description": "Hacked description.",
             "tech_stack": "Hacked",
             "project_url": "https://hacked.com",
             "project_image_url": "",
-            "secret_code": "wrong_passcode_xyz",
         }
         response = self.client.post(edit_url, payload)
         self.assertEqual(response.status_code, 200)
@@ -287,7 +348,7 @@ class AuthTest(TestCase):
 
 class ProjectPermissionTest(TestCase):
     def setUp(self):
-        from django.contrib.auth.models import User
+        from django.contrib.auth.models import Group, User
         self.regular_user = User.objects.create_user(
             username="regular",
             password="RegularPassword123!",
@@ -296,6 +357,12 @@ class ProjectPermissionTest(TestCase):
             username="adminuser",
             password="AdminPassword123!",
         )
+        self.editor_group = Group.objects.create(name="Editor")
+        self.editor_user = User.objects.create_user(
+            username="editor_proj",
+            password="EditorPassword123!",
+        )
+        self.editor_user.groups.add(self.editor_group)
         self.project = Project.objects.create(
             title="Secured Project",
             description="Testing authorization rules.",
@@ -313,7 +380,6 @@ class ProjectPermissionTest(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_create_project_superuser_allowed(self):
-        from django.conf import settings
         self.client.login(username="adminuser", password="AdminPassword123!")
         response = self.client.get(reverse("main:create_project"))
         self.assertEqual(response.status_code, 200)
@@ -324,7 +390,6 @@ class ProjectPermissionTest(TestCase):
             "tech_stack": "Django",
             "project_url": "",
             "project_image_url": "",
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
         }
         post_response = self.client.post(reverse("main:create_project"), payload)
         self.assertRedirects(post_response, reverse("main:show_projects"))
@@ -363,6 +428,24 @@ class ProjectPermissionTest(TestCase):
         response = self.client.get(edit_url)
         self.assertEqual(response.status_code, 403)
 
+    def test_update_project_editor_allowed(self):
+        self.client.login(username="editor_proj", password="EditorPassword123!")
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        get_res = self.client.get(edit_url)
+        self.assertEqual(get_res.status_code, 200)
+
+        payload = {
+            "title": "Secured Project Edited by Editor",
+            "description": "Edited by editor.",
+            "tech_stack": "Django",
+            "project_url": "",
+            "project_image_url": "",
+        }
+        post_res = self.client.post(edit_url, payload)
+        self.assertRedirects(post_res, reverse("main:show_projects"))
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.title, "Secured Project Edited by Editor")
+
     def test_projects_page_ui_controls_visitor_vs_superuser(self):
         edit_url = reverse("main:update_project", args=[self.project.id])
 
@@ -378,6 +461,13 @@ class ProjectPermissionTest(TestCase):
         self.assertNotContains(response, "+ Tambah Proyek")
         self.assertNotContains(response, f'href="{edit_url}"')
         self.assertNotContains(response, f'popovertarget="delete-project-{self.project.id}"')
+
+        # Editor user
+        self.client.login(username="editor_proj", password="EditorPassword123!")
+        response_ed = self.client.get(reverse("main:show_projects"))
+        self.assertNotContains(response_ed, "+ Tambah Proyek")
+        self.assertContains(response_ed, f'href="{edit_url}"')
+        self.assertNotContains(response_ed, f'popovertarget="delete-project-{self.project.id}"')
 
         # Superuser
         self.client.login(username="adminuser", password="AdminPassword123!")
@@ -447,6 +537,228 @@ class ProjectStarTest(TestCase):
         data = json.loads(response.content.decode("utf-8"))
         starred_project = next(item for item in data if item["pk"] == str(self.project.id))
         self.assertEqual(starred_project["fields"]["starred_by"], [["staruser"]])
+
+
+class SkillTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Group, User
+        self.editor_group = Group.objects.create(name="Editor")
+        self.regular_user = User.objects.create_user(username="regular_skill", password="RegularPassword123!")
+        self.editor_user = User.objects.create_user(username="editor_skill", password="EditorPassword123!")
+        self.editor_user.groups.add(self.editor_group)
+        self.superuser = User.objects.create_superuser(username="admin_skill", password="AdminPassword123!")
+
+        self.skill = Skill.objects.create(
+            name="Python",
+            category="languages",
+            proficiency_percent=90,
+            is_core=True,
+        )
+
+    def test_skills_page_displays_skill(self):
+        response = self.client.get(reverse("main:show_skills"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Python")
+
+    # Anonymous Visitor Tests
+    def test_anonymous_cannot_create_skill(self):
+        response = self.client.get(reverse("main:create_skill"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_anonymous_cannot_update_skill(self):
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_anonymous_cannot_delete_skill(self):
+        delete_url = reverse("main:delete_skill", args=[self.skill.id])
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_anonymous_cannot_toggle_star_skill(self):
+        star_url = reverse("main:toggle_star_skill", args=[self.skill.id])
+        response = self.client.post(star_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    # Regular User Tests
+    def test_regular_user_cannot_create_skill(self):
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        response = self.client.get(reverse("main:create_skill"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_regular_user_cannot_update_skill(self):
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_regular_user_cannot_delete_skill(self):
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        delete_url = reverse("main:delete_skill", args=[self.skill.id])
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_regular_user_can_toggle_star_skill(self):
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        star_url = reverse("main:toggle_star_skill", args=[self.skill.id])
+        # Star
+        response = self.client.post(star_url)
+        self.assertRedirects(response, reverse("main:show_skills"))
+        self.assertTrue(self.skill.starred_by.filter(id=self.regular_user.id).exists())
+        # Unstar
+        response2 = self.client.post(star_url)
+        self.assertRedirects(response2, reverse("main:show_skills"))
+        self.assertFalse(self.skill.starred_by.filter(id=self.regular_user.id).exists())
+
+    # Editor Tests
+    def test_editor_cannot_create_skill(self):
+        self.client.login(username="editor_skill", password="EditorPassword123!")
+        response = self.client.get(reverse("main:create_skill"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_cannot_delete_skill(self):
+        self.client.login(username="editor_skill", password="EditorPassword123!")
+        delete_url = reverse("main:delete_skill", args=[self.skill.id])
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_can_update_skill(self):
+        self.client.login(username="editor_skill", password="EditorPassword123!")
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        get_response = self.client.get(edit_url)
+        self.assertEqual(get_response.status_code, 200)
+
+        payload = {
+            "name": "Python 3.12",
+            "category": "languages",
+            "proficiency_percent": 95,
+            "is_core": True,
+            "logo_url": "",
+        }
+        post_response = self.client.post(edit_url, payload)
+        self.assertRedirects(post_response, reverse("main:show_skills"))
+        self.skill.refresh_from_db()
+        self.assertEqual(self.skill.name, "Python 3.12")
+
+    # Superuser Tests
+    def test_superuser_can_create_skill(self):
+        self.client.login(username="admin_skill", password="AdminPassword123!")
+        get_response = self.client.get(reverse("main:create_skill"))
+        self.assertEqual(get_response.status_code, 200)
+
+        payload = {
+            "name": "Rust",
+            "category": "languages",
+            "proficiency_percent": 80,
+            "is_core": False,
+            "logo_url": "",
+        }
+        post_response = self.client.post(reverse("main:create_skill"), payload)
+        self.assertRedirects(post_response, reverse("main:show_skills"))
+        self.assertTrue(Skill.objects.filter(name="Rust").exists())
+
+    def test_superuser_can_update_skill(self):
+        self.client.login(username="admin_skill", password="AdminPassword123!")
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        payload = {
+            "name": "Python Master",
+            "category": "languages",
+            "proficiency_percent": 99,
+            "is_core": True,
+            "logo_url": "",
+        }
+        post_response = self.client.post(edit_url, payload)
+        self.assertRedirects(post_response, reverse("main:show_skills"))
+        self.skill.refresh_from_db()
+        self.assertEqual(self.skill.name, "Python Master")
+
+    def test_superuser_can_delete_skill(self):
+        self.client.login(username="admin_skill", password="AdminPassword123!")
+        delete_url = reverse("main:delete_skill", args=[self.skill.id])
+        response = self.client.post(delete_url)
+        self.assertRedirects(response, reverse("main:show_skills"))
+        self.assertFalse(Skill.objects.filter(id=self.skill.id).exists())
+
+    def test_skills_page_ui_controls_4_tiers(self):
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        endorse_url = reverse("main:toggle_endorse_skill", args=[self.skill.id])
+
+        # 1. Anonymous visitor
+        response_anon = self.client.get(reverse("main:show_skills"))
+        self.assertNotContains(response_anon, "+ Tambah Skill")
+        self.assertNotContains(response_anon, f'href="{edit_url}"')
+        self.assertNotContains(response_anon, f'popovertarget="delete-skill-{self.skill.id}"')
+        self.assertContains(response_anon, f'action="{endorse_url}"')
+        self.assertContains(response_anon, "Endorse")
+        self.assertContains(response_anon, '<span class="star-count endorse-count">0</span>')
+
+        # 2. Regular user
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        response_reg = self.client.get(reverse("main:show_skills"))
+        self.assertNotContains(response_reg, "+ Tambah Skill")
+        self.assertNotContains(response_reg, f'href="{edit_url}"')
+        self.assertNotContains(response_reg, f'popovertarget="delete-skill-{self.skill.id}"')
+        self.assertContains(response_reg, f'action="{endorse_url}"')
+
+        # Regular user endorses the skill
+        self.client.post(endorse_url)
+        response_reg_starred = self.client.get(reverse("main:show_skills"))
+        self.assertContains(response_reg_starred, "is-endorsed")
+        self.assertContains(response_reg_starred, "Endorsed")
+        self.assertContains(response_reg_starred, '<span class="star-count endorse-count">1</span>')
+        self.assertContains(response_reg_starred, "regular_skill")
+
+        # 3. Editor user
+        self.client.login(username="editor_skill", password="EditorPassword123!")
+        response_editor = self.client.get(reverse("main:show_skills"))
+        self.assertNotContains(response_editor, "+ Tambah Skill")
+        self.assertContains(response_editor, f'href="{edit_url}"')
+        self.assertNotContains(response_editor, f'popovertarget="delete-skill-{self.skill.id}"')
+        self.assertContains(response_editor, f'action="{endorse_url}"')
+
+        # 4. Superuser
+        self.client.login(username="admin_skill", password="AdminPassword123!")
+        response_admin = self.client.get(reverse("main:show_skills"))
+        self.assertContains(response_admin, "+ Tambah Skill")
+        self.assertContains(response_admin, f'href="{edit_url}"')
+        self.assertContains(response_admin, f'popovertarget="delete-skill-{self.skill.id}"')
+        self.assertContains(response_admin, f'action="{endorse_url}"')
+
+    def test_api_skills_use_natural_foreign_keys(self):
+        import json
+        self.skill.starred_by.add(self.regular_user)
+        response = self.client.get(reverse("main:get_skills_json"))
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode("utf-8"))
+        starred_skill = next(item for item in data if item["pk"] == str(self.skill.id))
+        self.assertEqual(starred_skill["fields"]["starred_by"], [["regular_skill"]])
+
+
+
+
+class RoleArchitectureTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Group, User
+        self.editor_group = Group.objects.create(name="Editor")
+        self.regular_user = User.objects.create_user(username="regular_role", password="Password123!")
+        self.editor_user = User.objects.create_user(username="editor_role", password="Password123!")
+        self.editor_user.groups.add(self.editor_group)
+        self.superuser = User.objects.create_superuser(username="admin_role", password="Password123!")
+
+    def test_is_editor_helper(self):
+        from django.contrib.auth.models import AnonymousUser
+        from main.views import is_editor
+
+        self.assertFalse(is_editor(AnonymousUser()))
+        self.assertFalse(is_editor(self.regular_user))
+        self.assertTrue(is_editor(self.editor_user))
+        self.assertTrue(is_editor(self.superuser))
+
+
 
 
 

@@ -19,6 +19,7 @@ class Experience(models.Model):
     thumbnail = models.URLField(blank=True, null=True)
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(blank=True, null=True)
+    vouched_by = models.ManyToManyField(User, related_name="vouched_experiences", blank=True)
 
     def __str__(self):
         return self.title
@@ -57,6 +58,7 @@ class Skill(models.Model):
     is_core = models.BooleanField(default=False)
     logo_url = models.URLField(blank=True, null=True, max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
+    starred_by = models.ManyToManyField(User, related_name="starred_skills", blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.get_category_display()})"

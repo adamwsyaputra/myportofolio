@@ -575,6 +575,133 @@ h1, h2, h3, .brand {
   line-height: 1.2;
 }
 
+/* Endorsement Button (LinkedIn style for Skills) */
+.button-endorse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.42rem 0.85rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ink) !important;
+  background-color: var(--surface) !important;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.button-endorse:hover {
+  background-color: #dbeafe !important;
+  color: var(--ink) !important;
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.button-endorse:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.button-endorse.is-endorsed {
+  background-color: var(--accent, #3b82f6) !important;
+  color: #ffffff !important;
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+}
+
+.button-endorse.is-endorsed:hover {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.button-endorse span[aria-hidden="true"] {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.button-endorse.is-endorsed span[aria-hidden="true"] {
+  color: #fef08a;
+}
+
+/* Vouch Button (Peer Verification for Experience) */
+.button-vouch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.42rem 0.85rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ink) !important;
+  background-color: var(--surface) !important;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.button-vouch:hover {
+  background-color: #dcfce7 !important;
+  color: var(--ink) !important;
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.button-vouch:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.button-vouch.is-vouched {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+}
+
+.button-vouch.is-vouched:hover {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+}
+
+.button-vouch span[aria-hidden="true"] {
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.endorse-count,
+.vouch-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--ink) !important;
+  background: var(--paper) !important;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 0.08rem 0.45rem;
+  margin-left: 0.25rem;
+  min-width: 22px;
+  line-height: 1.2;
+}
+
 /* --- Section 4: Experience--- */
 .experience-section {
   padding: 5rem 0;
@@ -857,12 +984,23 @@ h1, h2, h3, .brand {
 
 .experience-card-actions {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
+  flex-direction: column;
   gap: 0.65rem;
   margin-top: auto;
   padding-top: 1rem;
   border-top: 2px dashed var(--line);
+}
+
+.experience-card-actions_manage {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.experience-card-actions_bottom {
+  width: 100%;
 }
 
 /* --- Comic Buttons System --- */
@@ -1534,12 +1672,23 @@ h1, h2, h3, .brand {
 /* Skill Card Actions */
 .skill-card-actions {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
+  flex-direction: column;
   gap: 0.65rem;
   margin-top: 1.4rem;
   padding-top: 1rem;
   border-top: 2px dashed var(--line);
+}
+
+.skill-card-actions_manage {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.skill-card-actions_bottom {
+  width: 100%;
 }
 
 /* Form Container Scaffolding */

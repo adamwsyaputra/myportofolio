@@ -55,10 +55,12 @@
                   <span></span>
                 {% endif %}
                 <div class="project-card-actions_manage">
-                  {% if user.is_superuser %}
+                  {% if user.is_superuser or is_editor %}
                     <a href="{% url 'main:update_project' project.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
                       Edit
                     </a>
+                  {% endif %}
+                  {% if user.is_superuser %}
                     {% include "components/project_delete_modal.html" with project=project %}
                   {% endif %}
                 </div>
