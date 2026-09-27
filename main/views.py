@@ -9,7 +9,6 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from main.forms import ExperienceForm, ProjectForm, SkillForm
 from main.models import Experience, Project, Skill
-from django.conf import settings
 
 NAME = "Adam Wahyu Syaputra"
 
@@ -75,13 +74,8 @@ def update_experience(request, experience_id):
 def delete_experience(request, experience_id):
     experience = get_object_or_404(Experience, pk=experience_id)
     if request.method == "POST":
-        code = request.POST.get("secret_code", "")
-        expected_code = settings.PORTFOLIO_SECRET_CODE
-        if not expected_code or code == expected_code:
-            experience.delete()
-            messages.success(request, "Pengalaman berhasil dihapus!")
-        else:
-            messages.error(request, "Gagal menghapus: Kode rahasia salah!")
+        experience.delete()
+        messages.success(request, "Pengalaman berhasil dihapus!")
     return redirect("main:show_experience")
 
 
@@ -224,16 +218,11 @@ def update_skill(request, skill_id):
     }
     return render(request, "skill_form.html", context)
 
-# 5. Delete Skill with Secret Code Protection
 def delete_skill(request, skill_id):
     skill = get_object_or_404(Skill, pk=skill_id)
     if request.method == "POST":
-        code = request.POST.get("secret_code", "")
-        if code == settings.PORTFOLIO_SECRET_CODE:
-            skill.delete()
-            messages.success(request, "Keahlian berhasil dihapus!")
-        else:
-            messages.error(request, "Gagal menghapus: Kode rahasia salah!")
+        skill.delete()
+        messages.success(request, "Keahlian berhasil dihapus!")
     return redirect("main:show_skills")
 
 

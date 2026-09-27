@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from main.models import Experience, Project
+from main.models import Experience, Project, Skill
 
 class MainTest(TestCase):
     def setUp(self):
@@ -62,14 +62,12 @@ class MainTest(TestCase):
         self.assertTemplateUsed(response, "experience_form.html")
 
     def test_create_experience_post_valid(self):
-        from django.conf import settings
         payload = {
             "title": "Backend Intern",
             "category": "internship",
             "description": "Building microservices with Django and FastAPI.",
             "thumbnail": "",
             "is_ongoing": "on",
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
         }
         response = self.client.post(reverse("main:create_experience"), payload)
         self.assertRedirects(response, reverse("main:show_experience"))
@@ -83,7 +81,6 @@ class MainTest(TestCase):
         self.assertContains(response, self.experience.title)
 
     def test_update_experience_post_valid(self):
-        from django.conf import settings
         edit_url = reverse("main:update_experience", args=[self.experience.id])
         payload = {
             "title": "Koordinator Asisten Dosen PBP",
@@ -91,7 +88,6 @@ class MainTest(TestCase):
             "description": "Memimpin tim asisten dosen pengembangan web.",
             "thumbnail": "",
             "is_ongoing": "on",
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
         }
         response = self.client.post(edit_url, payload)
         self.assertRedirects(response, reverse("main:show_experience"))
@@ -99,12 +95,8 @@ class MainTest(TestCase):
         self.assertEqual(self.experience.title, "Koordinator Asisten Dosen PBP")
 
     def test_delete_experience_post_valid(self):
-        from django.conf import settings
         delete_url = reverse("main:delete_experience", args=[self.experience.id])
-        payload = {
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
-        }
-        response = self.client.post(delete_url, payload)
+        response = self.client.post(delete_url)
         self.assertRedirects(response, reverse("main:show_experience"))
         self.assertFalse(Experience.objects.filter(id=self.experience.id).exists())
 
@@ -162,7 +154,6 @@ class ProjectTest(TestCase):
         self.assertContains(response, "Edit Project:")
 
     def test_update_project_post_valid(self):
-        from django.conf import settings
         self.client.login(username="admin_proj", password="AdminPassword123!")
         edit_url = reverse("main:update_project", args=[self.project.id])
         payload = {
@@ -171,24 +162,21 @@ class ProjectTest(TestCase):
             "tech_stack": "Python, Django, Telephony",
             "project_url": "https://github.com/adamwsyaputra/updated",
             "project_image_url": "",
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
         }
         response = self.client.post(edit_url, payload)
         self.assertRedirects(response, reverse("main:show_projects"))
         self.project.refresh_from_db()
         self.assertEqual(self.project.title, "EduText AI Updated")
 
-    def test_update_project_post_invalid_passcode(self):
-        from django.conf import settings
+    def test_update_project_post_invalid_data(self):
         self.client.login(username="admin_proj", password="AdminPassword123!")
         edit_url = reverse("main:update_project", args=[self.project.id])
         payload = {
-            "title": "Hacked Title",
+            "title": "",
             "description": "Hacked description.",
             "tech_stack": "Hacked",
             "project_url": "https://hacked.com",
             "project_image_url": "",
-            "secret_code": "wrong_passcode_xyz",
         }
         response = self.client.post(edit_url, payload)
         self.assertEqual(response.status_code, 200)
@@ -313,7 +301,6 @@ class ProjectPermissionTest(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_create_project_superuser_allowed(self):
-        from django.conf import settings
         self.client.login(username="adminuser", password="AdminPassword123!")
         response = self.client.get(reverse("main:create_project"))
         self.assertEqual(response.status_code, 200)
@@ -324,7 +311,6 @@ class ProjectPermissionTest(TestCase):
             "tech_stack": "Django",
             "project_url": "",
             "project_image_url": "",
-            "secret_code": settings.PORTFOLIO_SECRET_CODE or "adam1012",
         }
         post_response = self.client.post(reverse("main:create_project"), payload)
         self.assertRedirects(post_response, reverse("main:show_projects"))
@@ -447,6 +433,54 @@ class ProjectStarTest(TestCase):
         data = json.loads(response.content.decode("utf-8"))
         starred_project = next(item for item in data if item["pk"] == str(self.project.id))
         self.assertEqual(starred_project["fields"]["starred_by"], [["staruser"]])
+
+
+class SkillTest(TestCase):
+    def setUp(self):
+        self.skill = Skill.objects.create(
+            name="Python",
+            category="languages",
+            proficiency_percent=90,
+            is_core=True,
+        )
+
+    def test_skills_page_displays_skill(self):
+        response = self.client.get(reverse("main:show_skills"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Python")
+
+    def test_create_skill_post(self):
+        payload = {
+            "name": "Rust",
+            "category": "languages",
+            "proficiency_percent": 80,
+            "is_core": False,
+            "logo_url": "",
+        }
+        response = self.client.post(reverse("main:create_skill"), payload)
+        self.assertRedirects(response, reverse("main:show_skills"))
+        self.assertTrue(Skill.objects.filter(name="Rust").exists())
+
+    def test_update_skill_post(self):
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        payload = {
+            "name": "Python 3",
+            "category": "languages",
+            "proficiency_percent": 95,
+            "is_core": True,
+            "logo_url": "",
+        }
+        response = self.client.post(edit_url, payload)
+        self.assertRedirects(response, reverse("main:show_skills"))
+        self.skill.refresh_from_db()
+        self.assertEqual(self.skill.name, "Python 3")
+
+    def test_delete_skill_post_without_passcode(self):
+        delete_url = reverse("main:delete_skill", args=[self.skill.id])
+        response = self.client.post(delete_url)
+        self.assertRedirects(response, reverse("main:show_skills"))
+        self.assertFalse(Skill.objects.filter(id=self.skill.id).exists())
+
 
 
 

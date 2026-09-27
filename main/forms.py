@@ -1,21 +1,9 @@
 from django import forms
-from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.forms import ModelForm, TextInput, Textarea, Select, NumberInput, CheckboxInput, URLInput
+from django.utils import timezone
 from main.models import Experience, Project, Skill
 
 class ProjectForm(ModelForm):
-    secret_code = forms.CharField(
-        widget=forms.PasswordInput(
-            attrs={
-                "placeholder": "Enter secret code to authorize",
-                "class": "form-input",
-            }
-        ),
-        label="Secret Passcode",
-        required=True,
-    )
-    
     class Meta:
         model = Project
         fields = [
@@ -40,25 +28,7 @@ class ProjectForm(ModelForm):
             "project_image_url": URLInput(attrs={"placeholder": "https://drive.google.com/thumbnail?id=...&sz=w1000"}),
         }
 
-    def clean_secret_code(self):
-        code = self.cleaned_data.get("secret_code")
-        expected_code = settings.PORTFOLIO_SECRET_CODE
-        if expected_code and code != expected_code:
-            raise ValidationError("Kode otorisasi salah! Aksi dibatalkan.")
-        return code
-
 class SkillForm(ModelForm):
-    secret_code = forms.CharField(
-        widget=forms.PasswordInput(
-            attrs={
-                "placeholder": "Enter secret code to authorize",
-                "class": "form-input",
-            }
-        ),
-        label="Secret Passcode",
-        required=True,
-    )
-
     class Meta:
         model = Skill
         fields = [
@@ -83,23 +53,7 @@ class SkillForm(ModelForm):
             "is_core": CheckboxInput(attrs={"class": "form-checkbox"}),
         }
 
-    def clean_secret_code(self):
-        code = self.cleaned_data.get("secret_code")
-        if code != settings.PORTFOLIO_SECRET_CODE:
-            raise ValidationError("Kode rahasia salah! Aksi tidak diizinkan.")
-        return code
-
 class ExperienceForm(ModelForm):
-    secret_code = forms.CharField(
-        widget=forms.PasswordInput(
-            attrs={
-                "placeholder": "Enter secret code to authorize",
-                "class": "form-input",
-            }
-        ),
-        label="Secret Passcode",
-        required=True,
-    )
     is_ongoing = forms.BooleanField(
         required=False,
         initial=True,
@@ -133,15 +87,7 @@ class ExperienceForm(ModelForm):
         if self.instance and self.instance.pk:
             self.fields["is_ongoing"].initial = self.instance.is_ongoing
 
-    def clean_secret_code(self):
-        code = self.cleaned_data.get("secret_code")
-        expected_code = settings.PORTFOLIO_SECRET_CODE
-        if expected_code and code != expected_code:
-            raise ValidationError("Kode otorisasi salah! Aksi dibatalkan.")
-        return code
-
     def save(self, commit=True):
-        from django.utils import timezone
         instance = super().save(commit=False)
         is_ongoing = self.cleaned_data.get("is_ongoing")
         if is_ongoing:
