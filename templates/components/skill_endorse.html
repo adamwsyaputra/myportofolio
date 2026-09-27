@@ -1,0 +1,10 @@
+<form method="post" action="{% url 'main:toggle_endorse_skill' skill.id %}" class="star-form endorse-form">
+  {% csrf_token %}
+  <button type="submit"
+          class="button button-endorse button-star{% if user in skill.starred_by.all %} is-endorsed is-starred{% endif %}"
+          title="{% if skill.starred_by.all %}Endorsed by {{ skill.starred_by.all|join:', ' }}{% else %}Be the first to endorse{% endif %}">
+    <span aria-hidden="true">{% if user in skill.starred_by.all %}&#9733;{% else %}&#9734;{% endif %}</span>
+    {% if user in skill.starred_by.all %}Endorsed{% else %}Endorse{% endif %}
+    <span class="star-count endorse-count">{{ skill.starred_by.count }}</span>
+  </button>
+</form>

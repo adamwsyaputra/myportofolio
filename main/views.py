@@ -38,17 +38,21 @@ def show_main(request):
 # Experience field
 def show_experience(request):
     category_query = request.GET.get("category", "").strip()
-    experiences = Experience.objects.all().order_by("-started_at")
+    experiences = Experience.objects.all().prefetch_related("vouched_by").order_by("-started_at")
     if category_query:
         experiences = experiences.filter(category=category_query)
     context = {
         "name": NAME,
         "experience_list": experiences,
         "selected_category": category_query,
+        "is_editor": is_editor(request.user),
     }
     return render(request, "experience.html", context)
 
+@login_required(login_url="/login/")
 def create_experience(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     form = ExperienceForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -64,7 +68,10 @@ def create_experience(request):
     }
     return render(request, "experience_form.html", context)
 
+@login_required(login_url="/login/")
 def update_experience(request, experience_id):
+    if not is_editor(request.user):
+        raise PermissionDenied
     experience = get_object_or_404(Experience, pk=experience_id)
     form = ExperienceForm(request.POST or None, instance=experience)
     if request.method == "POST" and form.is_valid():
@@ -81,11 +88,24 @@ def update_experience(request, experience_id):
     }
     return render(request, "experience_form.html", context)
 
+@login_required(login_url="/login/")
 def delete_experience(request, experience_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     experience = get_object_or_404(Experience, pk=experience_id)
     if request.method == "POST":
         experience.delete()
         messages.success(request, "Pengalaman berhasil dihapus!")
+    return redirect("main:show_experience")
+
+@login_required(login_url="/login/")
+def toggle_vouch_experience(request, experience_id):
+    experience = get_object_or_404(Experience, pk=experience_id)
+    if request.method == "POST":
+        if request.user in experience.vouched_by.all():
+            experience.vouched_by.remove(request.user)
+        else:
+            experience.vouched_by.add(request.user)
     return redirect("main:show_experience")
 
 
@@ -192,6 +212,7 @@ def show_skills(request):
         "name": NAME,
         "skill_list": skills,
         "selected_category": category_query,
+        "is_editor": is_editor(request.user),
     }
     return render(request, "skills.html", context)
 
@@ -243,7 +264,7 @@ def delete_skill(request, skill_id):
     return redirect("main:show_skills")
 
 @login_required(login_url="/login/")
-def toggle_star_skill(request, skill_id):
+def toggle_endorse_skill(request, skill_id):
     skill = get_object_or_404(Skill, pk=skill_id)
     if request.method == "POST":
         if request.user in skill.starred_by.all():
@@ -251,6 +272,8 @@ def toggle_star_skill(request, skill_id):
         else:
             skill.starred_by.add(request.user)
     return redirect("main:show_skills")
+
+toggle_star_skill = toggle_endorse_skill
 
 
 # Authentication Views

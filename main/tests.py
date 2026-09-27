@@ -5,6 +5,13 @@ from main.models import Experience, Project, Skill
 
 class MainTest(TestCase):
     def setUp(self):
+        from django.contrib.auth.models import Group, User
+        self.editor_group = Group.objects.create(name="Editor")
+        self.regular_user = User.objects.create_user(username="regular_exp", password="RegularPassword123!")
+        self.editor_user = User.objects.create_user(username="editor_exp", password="EditorPassword123!")
+        self.editor_user.groups.add(self.editor_group)
+        self.superuser = User.objects.create_superuser(username="admin_exp", password="AdminPassword123!")
+
         self.experience = Experience.objects.create(
             title="Asisten Dosen PBP",
             description="Membantu mahasiswa memahami pengembangan web.",
@@ -50,18 +57,36 @@ class MainTest(TestCase):
         self.assertContains(response, "Selesai")
         self.assertNotContains(response, "Sedang berlangsung")
 
-    def test_experience_page_contains_edit_link(self):
+    def test_experience_page_anonymous_controls(self):
         response = self.client.get(reverse("main:show_experience"))
         self.assertEqual(response.status_code, 200)
         edit_url = reverse("main:update_experience", args=[self.experience.id])
-        self.assertContains(response, f'href="{edit_url}"')
+        self.assertNotContains(response, f'href="{edit_url}"')
+        self.assertNotContains(response, "+ Tambah Pengalaman")
+        self.assertNotContains(response, f'popovertarget="delete-exp-{self.experience.id}"')
+        vouch_url = reverse("main:toggle_vouch_experience", args=[self.experience.id])
+        self.assertContains(response, f'action="{vouch_url}"')
 
-    def test_create_experience_get(self):
+    def test_create_experience_anonymous_redirects(self):
+        response = self.client.get(reverse("main:create_experience"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_create_experience_non_superuser_forbidden(self):
+        self.client.login(username="regular_exp", password="RegularPassword123!")
+        response = self.client.get(reverse("main:create_experience"))
+        self.assertEqual(response.status_code, 403)
+
+        self.client.login(username="editor_exp", password="EditorPassword123!")
+        response_ed = self.client.get(reverse("main:create_experience"))
+        self.assertEqual(response_ed.status_code, 403)
+
+    def test_create_experience_superuser_allowed(self):
+        self.client.login(username="admin_exp", password="AdminPassword123!")
         response = self.client.get(reverse("main:create_experience"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience_form.html")
 
-    def test_create_experience_post_valid(self):
         payload = {
             "title": "Backend Intern",
             "category": "internship",
@@ -69,19 +94,30 @@ class MainTest(TestCase):
             "thumbnail": "",
             "is_ongoing": "on",
         }
-        response = self.client.post(reverse("main:create_experience"), payload)
-        self.assertRedirects(response, reverse("main:show_experience"))
+        post_response = self.client.post(reverse("main:create_experience"), payload)
+        self.assertRedirects(post_response, reverse("main:show_experience"))
         self.assertTrue(Experience.objects.filter(title="Backend Intern").exists())
 
-    def test_update_experience_get(self):
+    def test_update_experience_anonymous_redirects(self):
+        edit_url = reverse("main:update_experience", args=[self.experience.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_update_experience_regular_forbidden(self):
+        self.client.login(username="regular_exp", password="RegularPassword123!")
+        edit_url = reverse("main:update_experience", args=[self.experience.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_update_experience_editor_allowed(self):
+        self.client.login(username="editor_exp", password="EditorPassword123!")
         edit_url = reverse("main:update_experience", args=[self.experience.id])
         response = self.client.get(edit_url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience_form.html")
         self.assertContains(response, self.experience.title)
 
-    def test_update_experience_post_valid(self):
-        edit_url = reverse("main:update_experience", args=[self.experience.id])
         payload = {
             "title": "Koordinator Asisten Dosen PBP",
             "category": "part-time",
@@ -89,16 +125,53 @@ class MainTest(TestCase):
             "thumbnail": "",
             "is_ongoing": "on",
         }
-        response = self.client.post(edit_url, payload)
-        self.assertRedirects(response, reverse("main:show_experience"))
+        post_response = self.client.post(edit_url, payload)
+        self.assertRedirects(post_response, reverse("main:show_experience"))
         self.experience.refresh_from_db()
         self.assertEqual(self.experience.title, "Koordinator Asisten Dosen PBP")
 
-    def test_delete_experience_post_valid(self):
+    def test_delete_experience_anonymous_redirects(self):
+        delete_url = reverse("main:delete_experience", args=[self.experience.id])
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_delete_experience_regular_and_editor_forbidden(self):
+        delete_url = reverse("main:delete_experience", args=[self.experience.id])
+
+        self.client.login(username="regular_exp", password="RegularPassword123!")
+        response_reg = self.client.post(delete_url)
+        self.assertEqual(response_reg.status_code, 403)
+
+        self.client.login(username="editor_exp", password="EditorPassword123!")
+        response_ed = self.client.post(delete_url)
+        self.assertEqual(response_ed.status_code, 403)
+
+    def test_delete_experience_superuser_allowed(self):
+        self.client.login(username="admin_exp", password="AdminPassword123!")
         delete_url = reverse("main:delete_experience", args=[self.experience.id])
         response = self.client.post(delete_url)
         self.assertRedirects(response, reverse("main:show_experience"))
         self.assertFalse(Experience.objects.filter(id=self.experience.id).exists())
+
+    def test_toggle_vouch_experience(self):
+        vouch_url = reverse("main:toggle_vouch_experience", args=[self.experience.id])
+
+        # Anonymous cannot vouch
+        anon_resp = self.client.post(vouch_url)
+        self.assertEqual(anon_resp.status_code, 302)
+        self.assertIn("/login/", anon_resp.url)
+
+        # Regular user can vouch
+        self.client.login(username="regular_exp", password="RegularPassword123!")
+        post_resp = self.client.post(vouch_url)
+        self.assertRedirects(post_resp, reverse("main:show_experience"))
+        self.assertTrue(self.experience.vouched_by.filter(id=self.regular_user.id).exists())
+
+        # Unvouch
+        post_resp2 = self.client.post(vouch_url)
+        self.assertRedirects(post_resp2, reverse("main:show_experience"))
+        self.assertFalse(self.experience.vouched_by.filter(id=self.regular_user.id).exists())
 
 
 class ProjectTest(TestCase):
@@ -578,6 +651,52 @@ class SkillTest(TestCase):
         response = self.client.post(delete_url)
         self.assertRedirects(response, reverse("main:show_skills"))
         self.assertFalse(Skill.objects.filter(id=self.skill.id).exists())
+
+    def test_skills_page_ui_controls_4_tiers(self):
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        endorse_url = reverse("main:toggle_endorse_skill", args=[self.skill.id])
+
+        # 1. Anonymous visitor
+        response_anon = self.client.get(reverse("main:show_skills"))
+        self.assertNotContains(response_anon, "+ Tambah Skill")
+        self.assertNotContains(response_anon, f'href="{edit_url}"')
+        self.assertNotContains(response_anon, f'popovertarget="delete-skill-{self.skill.id}"')
+        self.assertContains(response_anon, f'action="{endorse_url}"')
+        self.assertContains(response_anon, "Endorse")
+        self.assertContains(response_anon, '<span class="star-count endorse-count">0</span>')
+
+        # 2. Regular user
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        response_reg = self.client.get(reverse("main:show_skills"))
+        self.assertNotContains(response_reg, "+ Tambah Skill")
+        self.assertNotContains(response_reg, f'href="{edit_url}"')
+        self.assertNotContains(response_reg, f'popovertarget="delete-skill-{self.skill.id}"')
+        self.assertContains(response_reg, f'action="{endorse_url}"')
+
+        # Regular user endorses the skill
+        self.client.post(endorse_url)
+        response_reg_starred = self.client.get(reverse("main:show_skills"))
+        self.assertContains(response_reg_starred, "is-endorsed")
+        self.assertContains(response_reg_starred, "Endorsed")
+        self.assertContains(response_reg_starred, '<span class="star-count endorse-count">1</span>')
+        self.assertContains(response_reg_starred, "regular_skill")
+
+        # 3. Editor user
+        self.client.login(username="editor_skill", password="EditorPassword123!")
+        response_editor = self.client.get(reverse("main:show_skills"))
+        self.assertNotContains(response_editor, "+ Tambah Skill")
+        self.assertContains(response_editor, f'href="{edit_url}"')
+        self.assertNotContains(response_editor, f'popovertarget="delete-skill-{self.skill.id}"')
+        self.assertContains(response_editor, f'action="{endorse_url}"')
+
+        # 4. Superuser
+        self.client.login(username="admin_skill", password="AdminPassword123!")
+        response_admin = self.client.get(reverse("main:show_skills"))
+        self.assertContains(response_admin, "+ Tambah Skill")
+        self.assertContains(response_admin, f'href="{edit_url}"')
+        self.assertContains(response_admin, f'popovertarget="delete-skill-{self.skill.id}"')
+        self.assertContains(response_admin, f'action="{endorse_url}"')
+
 
 
 class RoleArchitectureTest(TestCase):

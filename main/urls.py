@@ -20,6 +20,8 @@ from main.views import (
     logout_user,
     toggle_star,
     toggle_star_skill,
+    toggle_endorse_skill,
+    toggle_vouch_experience,
 )
 
 app_name = "main"
@@ -33,6 +35,7 @@ urlpatterns = [
     path("experience/add/", create_experience, name="create_experience"),
     path("experience/<uuid:experience_id>/edit/", update_experience, name="update_experience"),
     path("experience/<uuid:experience_id>/delete/", delete_experience, name="delete_experience"),
+    path("experience/<uuid:experience_id>/vouch/", toggle_vouch_experience, name="toggle_vouch_experience"),
     path("projects/", show_projects, name="show_projects"),
     path("projects/add/", create_project, name="create_project"),
     path("projects/<uuid:project_id>/edit/", update_project, name="update_project"),
@@ -43,6 +46,7 @@ urlpatterns = [
     path("skills/add/", create_skill, name="create_skill"),
     path("skills/<uuid:skill_id>/edit/", update_skill, name="update_skill"),
     path("skills/<uuid:skill_id>/delete/", delete_skill, name="delete_skill"),
+    path("skills/<uuid:skill_id>/endorse/", toggle_endorse_skill, name="toggle_endorse_skill"),
     path("skills/<uuid:skill_id>/star/", toggle_star_skill, name="toggle_star_skill"),
     path("api/skills/", get_skills_json, name="get_skills_json"),
 ]

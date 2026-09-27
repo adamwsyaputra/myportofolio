@@ -12,9 +12,11 @@
         <p class="hero-kicker">TECHNICAL SKILLS</p>
         <h1 class="section-title">Skills & Capabilities</h1>
       </div>
-      <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">
-        + Tambah Skill
-      </a>
+      {% if user.is_superuser %}
+        <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">
+          + Tambah Skill
+        </a>
+      {% endif %}
     </div>
 
     <!-- Category Filter Bar -->
@@ -74,10 +76,19 @@
           </div>
 
           <div class="skill-card-actions">
-            <a href="{% url 'main:update_skill' skill.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
-              Edit
-            </a>
-            {% include "components/skill_delete_modal.html" with skill=skill %}
+            {% if user.is_superuser or is_editor %}
+              <div class="skill-card-actions_manage">
+                <a href="{% url 'main:update_skill' skill.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
+                  Edit
+                </a>
+                {% if user.is_superuser %}
+                  {% include "components/skill_delete_modal.html" with skill=skill %}
+                {% endif %}
+              </div>
+            {% endif %}
+            <div class="skill-card-actions_bottom">
+              {% include "components/skill_endorse.html" with skill=skill %}
+            </div>
           </div>
         </article>
       {% empty %}
@@ -85,7 +96,9 @@
           <p class="hero-kicker">EMPTY ARSENAL</p>
           <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 0.5rem;">Belum Ada Keahlian</h2>
           <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Tambahkan keahlian pertama Anda untuk melengkapi Technical Arsenal.</p>
-          <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">+ Tambah Skill Sekarang</a>
+          {% if user.is_superuser %}
+            <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">+ Tambah Skill Sekarang</a>
+          {% endif %}
         </div>
       {% endfor %}
     </div>

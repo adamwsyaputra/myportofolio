@@ -12,9 +12,11 @@
         <p class="hero-kicker">MY JOURNEY SO FAR</p>
         <h1 class="section-title" style="margin-bottom: 0;">Experience</h1>
       </div>
-      <a href="{% url 'main:create_experience' %}" class="comic-btn comic-btn-primary">
-        + Tambah Pengalaman
-      </a>
+      {% if user.is_superuser %}
+        <a href="{% url 'main:create_experience' %}" class="comic-btn comic-btn-primary">
+          + Tambah Pengalaman
+        </a>
+      {% endif %}
     </div>
 
     <!-- Category Filter Bar -->
@@ -57,10 +59,19 @@
           <p class="experience-description">{{ experience.description }}</p>
 
           <div class="experience-card-actions">
-            <a href="{% url 'main:update_experience' experience.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
-              Edit
-            </a>
-            {% include "components/experience_delete_modal.html" with experience=experience %}
+            {% if user.is_superuser or is_editor %}
+              <div class="experience-card-actions_manage">
+                <a href="{% url 'main:update_experience' experience.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
+                  Edit
+                </a>
+                {% if user.is_superuser %}
+                  {% include "components/experience_delete_modal.html" with experience=experience %}
+                {% endif %}
+              </div>
+            {% endif %}
+            <div class="experience-card-actions_bottom">
+              {% include "components/experience_vouch.html" with experience=experience %}
+            </div>
           </div>
         </article>
       {% empty %}
@@ -68,7 +79,9 @@
           <p class="hero-kicker">EMPTY JOURNEY</p>
           <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 0.5rem;">Belum Ada Pengalaman</h2>
           <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Belum ada pengalaman yang ditambahkan.</p>
-          <a href="{% url 'main:create_experience' %}" class="comic-btn comic-btn-primary">+ Tambah Pengalaman Sekarang</a>
+          {% if user.is_superuser %}
+            <a href="{% url 'main:create_experience' %}" class="comic-btn comic-btn-primary">+ Tambah Pengalaman Sekarang</a>
+          {% endif %}
         </div>
       {% endfor %}
     </div>

@@ -1,0 +1,10 @@
+<form method="post" action="{% url 'main:toggle_vouch_experience' experience.id %}" class="star-form vouch-form">
+  {% csrf_token %}
+  <button type="submit"
+          class="button button-vouch{% if user in experience.vouched_by.all %} is-vouched{% endif %}"
+          title="{% if experience.vouched_by.all %}Vouched by {{ experience.vouched_by.all|join:', ' }}{% else %}Be the first to vouch for this role{% endif %}">
+    <span aria-hidden="true">{% if user in experience.vouched_by.all %}&#10003;{% else %}+{% endif %}</span>
+    {% if user in experience.vouched_by.all %}Vouched{% else %}Vouch{% endif %}
+    <span class="vouch-count star-count">{{ experience.vouched_by.count }}</span>
+  </button>
+</form>
