@@ -348,7 +348,7 @@ class AuthTest(TestCase):
 
 class ProjectPermissionTest(TestCase):
     def setUp(self):
-        from django.contrib.auth.models import User
+        from django.contrib.auth.models import Group, User
         self.regular_user = User.objects.create_user(
             username="regular",
             password="RegularPassword123!",
@@ -357,6 +357,12 @@ class ProjectPermissionTest(TestCase):
             username="adminuser",
             password="AdminPassword123!",
         )
+        self.editor_group = Group.objects.create(name="Editor")
+        self.editor_user = User.objects.create_user(
+            username="editor_proj",
+            password="EditorPassword123!",
+        )
+        self.editor_user.groups.add(self.editor_group)
         self.project = Project.objects.create(
             title="Secured Project",
             description="Testing authorization rules.",
@@ -422,6 +428,24 @@ class ProjectPermissionTest(TestCase):
         response = self.client.get(edit_url)
         self.assertEqual(response.status_code, 403)
 
+    def test_update_project_editor_allowed(self):
+        self.client.login(username="editor_proj", password="EditorPassword123!")
+        edit_url = reverse("main:update_project", args=[self.project.id])
+        get_res = self.client.get(edit_url)
+        self.assertEqual(get_res.status_code, 200)
+
+        payload = {
+            "title": "Secured Project Edited by Editor",
+            "description": "Edited by editor.",
+            "tech_stack": "Django",
+            "project_url": "",
+            "project_image_url": "",
+        }
+        post_res = self.client.post(edit_url, payload)
+        self.assertRedirects(post_res, reverse("main:show_projects"))
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.title, "Secured Project Edited by Editor")
+
     def test_projects_page_ui_controls_visitor_vs_superuser(self):
         edit_url = reverse("main:update_project", args=[self.project.id])
 
@@ -437,6 +461,13 @@ class ProjectPermissionTest(TestCase):
         self.assertNotContains(response, "+ Tambah Proyek")
         self.assertNotContains(response, f'href="{edit_url}"')
         self.assertNotContains(response, f'popovertarget="delete-project-{self.project.id}"')
+
+        # Editor user
+        self.client.login(username="editor_proj", password="EditorPassword123!")
+        response_ed = self.client.get(reverse("main:show_projects"))
+        self.assertNotContains(response_ed, "+ Tambah Proyek")
+        self.assertContains(response_ed, f'href="{edit_url}"')
+        self.assertNotContains(response_ed, f'popovertarget="delete-project-{self.project.id}"')
 
         # Superuser
         self.client.login(username="adminuser", password="AdminPassword123!")
