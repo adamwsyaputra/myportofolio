@@ -195,8 +195,10 @@ def show_skills(request):
     }
     return render(request, "skills.html", context)
 
-# 3. Create Skill with Secret Code Protection
+@login_required(login_url="/login/")
 def create_skill(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     form = SkillForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -211,8 +213,10 @@ def create_skill(request):
     }
     return render(request, "skill_form.html", context)
 
-# 4. Update Skill with Secret Code Protection
+@login_required(login_url="/login/")
 def update_skill(request, skill_id):
+    if not is_editor(request.user):
+        raise PermissionDenied
     skill = get_object_or_404(Skill, pk=skill_id)
     form = SkillForm(request.POST or None, instance=skill)
     if request.method == "POST" and form.is_valid():
@@ -228,11 +232,24 @@ def update_skill(request, skill_id):
     }
     return render(request, "skill_form.html", context)
 
+@login_required(login_url="/login/")
 def delete_skill(request, skill_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     skill = get_object_or_404(Skill, pk=skill_id)
     if request.method == "POST":
         skill.delete()
         messages.success(request, "Keahlian berhasil dihapus!")
+    return redirect("main:show_skills")
+
+@login_required(login_url="/login/")
+def toggle_star_skill(request, skill_id):
+    skill = get_object_or_404(Skill, pk=skill_id)
+    if request.method == "POST":
+        if request.user in skill.starred_by.all():
+            skill.starred_by.remove(request.user)
+        else:
+            skill.starred_by.add(request.user)
     return redirect("main:show_skills")
 
 

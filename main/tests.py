@@ -437,6 +437,13 @@ class ProjectStarTest(TestCase):
 
 class SkillTest(TestCase):
     def setUp(self):
+        from django.contrib.auth.models import Group, User
+        self.editor_group = Group.objects.create(name="Editor")
+        self.regular_user = User.objects.create_user(username="regular_skill", password="RegularPassword123!")
+        self.editor_user = User.objects.create_user(username="editor_skill", password="EditorPassword123!")
+        self.editor_user.groups.add(self.editor_group)
+        self.superuser = User.objects.create_superuser(username="admin_skill", password="AdminPassword123!")
+
         self.skill = Skill.objects.create(
             name="Python",
             category="languages",
@@ -449,7 +456,96 @@ class SkillTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Python")
 
-    def test_create_skill_post(self):
+    # Anonymous Visitor Tests
+    def test_anonymous_cannot_create_skill(self):
+        response = self.client.get(reverse("main:create_skill"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_anonymous_cannot_update_skill(self):
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_anonymous_cannot_delete_skill(self):
+        delete_url = reverse("main:delete_skill", args=[self.skill.id])
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_anonymous_cannot_toggle_star_skill(self):
+        star_url = reverse("main:toggle_star_skill", args=[self.skill.id])
+        response = self.client.post(star_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    # Regular User Tests
+    def test_regular_user_cannot_create_skill(self):
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        response = self.client.get(reverse("main:create_skill"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_regular_user_cannot_update_skill(self):
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_regular_user_cannot_delete_skill(self):
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        delete_url = reverse("main:delete_skill", args=[self.skill.id])
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_regular_user_can_toggle_star_skill(self):
+        self.client.login(username="regular_skill", password="RegularPassword123!")
+        star_url = reverse("main:toggle_star_skill", args=[self.skill.id])
+        # Star
+        response = self.client.post(star_url)
+        self.assertRedirects(response, reverse("main:show_skills"))
+        self.assertTrue(self.skill.starred_by.filter(id=self.regular_user.id).exists())
+        # Unstar
+        response2 = self.client.post(star_url)
+        self.assertRedirects(response2, reverse("main:show_skills"))
+        self.assertFalse(self.skill.starred_by.filter(id=self.regular_user.id).exists())
+
+    # Editor Tests
+    def test_editor_cannot_create_skill(self):
+        self.client.login(username="editor_skill", password="EditorPassword123!")
+        response = self.client.get(reverse("main:create_skill"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_cannot_delete_skill(self):
+        self.client.login(username="editor_skill", password="EditorPassword123!")
+        delete_url = reverse("main:delete_skill", args=[self.skill.id])
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_can_update_skill(self):
+        self.client.login(username="editor_skill", password="EditorPassword123!")
+        edit_url = reverse("main:update_skill", args=[self.skill.id])
+        get_response = self.client.get(edit_url)
+        self.assertEqual(get_response.status_code, 200)
+
+        payload = {
+            "name": "Python 3.12",
+            "category": "languages",
+            "proficiency_percent": 95,
+            "is_core": True,
+            "logo_url": "",
+        }
+        post_response = self.client.post(edit_url, payload)
+        self.assertRedirects(post_response, reverse("main:show_skills"))
+        self.skill.refresh_from_db()
+        self.assertEqual(self.skill.name, "Python 3.12")
+
+    # Superuser Tests
+    def test_superuser_can_create_skill(self):
+        self.client.login(username="admin_skill", password="AdminPassword123!")
+        get_response = self.client.get(reverse("main:create_skill"))
+        self.assertEqual(get_response.status_code, 200)
+
         payload = {
             "name": "Rust",
             "category": "languages",
@@ -457,25 +553,27 @@ class SkillTest(TestCase):
             "is_core": False,
             "logo_url": "",
         }
-        response = self.client.post(reverse("main:create_skill"), payload)
-        self.assertRedirects(response, reverse("main:show_skills"))
+        post_response = self.client.post(reverse("main:create_skill"), payload)
+        self.assertRedirects(post_response, reverse("main:show_skills"))
         self.assertTrue(Skill.objects.filter(name="Rust").exists())
 
-    def test_update_skill_post(self):
+    def test_superuser_can_update_skill(self):
+        self.client.login(username="admin_skill", password="AdminPassword123!")
         edit_url = reverse("main:update_skill", args=[self.skill.id])
         payload = {
-            "name": "Python 3",
+            "name": "Python Master",
             "category": "languages",
-            "proficiency_percent": 95,
+            "proficiency_percent": 99,
             "is_core": True,
             "logo_url": "",
         }
-        response = self.client.post(edit_url, payload)
-        self.assertRedirects(response, reverse("main:show_skills"))
+        post_response = self.client.post(edit_url, payload)
+        self.assertRedirects(post_response, reverse("main:show_skills"))
         self.skill.refresh_from_db()
-        self.assertEqual(self.skill.name, "Python 3")
+        self.assertEqual(self.skill.name, "Python Master")
 
-    def test_delete_skill_post_without_passcode(self):
+    def test_superuser_can_delete_skill(self):
+        self.client.login(username="admin_skill", password="AdminPassword123!")
         delete_url = reverse("main:delete_skill", args=[self.skill.id])
         response = self.client.post(delete_url)
         self.assertRedirects(response, reverse("main:show_skills"))
