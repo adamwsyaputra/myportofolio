@@ -69,7 +69,8 @@ h1, h2, h3, .brand {
 
 .site-header nav {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
+  align-items: center;
 }
 
 .site-header nav a {
@@ -82,6 +83,19 @@ h1, h2, h3, .brand {
 
 .site-header nav a:hover {
   color: var(--accent);
+}
+
+.nav-user {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.65rem;
+  box-shadow: 2px 2px 0 var(--ink);
+  letter-spacing: 0.02em;
 }
 
 /* --- Section 1: Hero--- */
@@ -131,7 +145,8 @@ h1, h2, h3, .brand {
 
 .meta-list {
   display: flex;
-  gap: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
   margin-bottom: 1.5rem;
 }
 
@@ -442,12 +457,19 @@ h1, h2, h3, .brand {
 
 .project-card-actions {
   display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: auto;
+  padding-top: 1.15rem;
+  border-top: 2px dashed var(--line);
+}
+
+.project-card-actions_top {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.85rem;
-  margin-top: auto;
-  padding-top: 1.25rem;
-  border-top: 2px dashed var(--line);
+  gap: 0.65rem;
+  width: 100%;
 }
 
 .project-card-actions_manage {
@@ -457,11 +479,100 @@ h1, h2, h3, .brand {
   flex-shrink: 0;
 }
 
+.project-card-actions_bottom {
+  width: 100%;
+}
+
 .project-card-actions .comic-btn-sm {
   padding: 0.35rem 0.65rem;
   font-size: 0.76rem;
   letter-spacing: 0.02em;
   white-space: nowrap;
+}
+
+/* Star Button & Form Component */
+.star-form {
+  display: flex;
+  width: 100%;
+  margin: 0;
+}
+
+.button.button-star,
+.button-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.42rem 0.85rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ink) !important;
+  background-color: var(--surface) !important;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.button.button-star:hover,
+.button-star:hover {
+  background-color: #fef08a !important;
+  color: var(--ink) !important;
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.button.button-star:active,
+.button-star:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.button.button-star.is-starred,
+.button-star.is-starred {
+  background-color: #facc15 !important;
+  color: var(--ink) !important;
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+}
+
+.button.button-star.is-starred:hover,
+.button-star.is-starred:hover {
+  background-color: #eab308 !important;
+  color: var(--ink) !important;
+}
+
+.button-star span[aria-hidden="true"] {
+  font-size: 1rem;
+  color: #ca8a04;
+  line-height: 1;
+}
+
+.button-star.is-starred span[aria-hidden="true"] {
+  color: #854d0e;
+}
+
+.star-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--ink) !important;
+  background: var(--paper) !important;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 0.08rem 0.45rem;
+  margin-left: 0.25rem;
+  min-width: 22px;
+  line-height: 1.2;
 }
 
 /* --- Section 4: Experience--- */
@@ -899,6 +1010,85 @@ h1, h2, h3, .brand {
   font-size: 0.85rem;
   font-weight: 600;
   margin-top: 0.35rem;
+}
+
+.form-help {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+.form-help ul {
+  margin-left: 1.25rem;
+  margin-top: 0.25rem;
+}
+
+.form-message {
+  padding: 0.75rem 1rem;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: #def7ec;
+  color: #03543f;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.button {
+  display: inline-block;
+  font-family: "Space Grotesk", -apple-system, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  background-color: var(--accent);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.5rem;
+  box-shadow: 4px 4px 0 var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  width: 100%;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+  background-color: var(--accent-dark);
+}
+
+.button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.experience-section:has(.project-form) .container {
+  max-width: 520px;
+}
+
+.experience-section .project-form {
+  background: var(--surface);
+  border: 3.5px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 7px 7px 0 var(--ink);
+  padding: 2.25rem;
+}
+
+.experience-section .container > p {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.experience-section .container > p a {
+  color: var(--accent-dark);
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 /* Custom Comic Checkbox Card */

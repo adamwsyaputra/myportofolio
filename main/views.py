@@ -1,4 +1,9 @@
+import datetime
 from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.core.exceptions import PermissionDenied
 from django.core import serializers
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,6 +22,7 @@ def show_main(request):
             "Hi, I'm Adam! I'm a Computer Science student at the University of Indonesia, "
             "passionate about cybersecurity, systems, and software engineering."
         ),
+        "last_login": request.COOKIES.get("last_login", "Never"),
     }
     return render(request, "index.html", context)
 
@@ -80,7 +86,10 @@ def delete_experience(request, experience_id):
 
 
 # Projects field
+@login_required(login_url="/login/")
 def create_project(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     form = ProjectForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -96,7 +105,10 @@ def create_project(request):
     }
     return render(request, "projects_form.html", context)
 
+@login_required(login_url="/login/")
 def update_project(request, project_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     project = get_object_or_404(Project, pk=project_id)
     form = ProjectForm(request.POST or None, instance=project)
     if request.method == "POST" and form.is_valid():
@@ -113,16 +125,24 @@ def update_project(request, project_id):
     }
     return render(request, "projects_form.html", context)
 
+@login_required(login_url="/login/")
 def delete_project(request, project_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     project = get_object_or_404(Project, pk=project_id)
     if request.method == "POST":
-        code = request.POST.get("secret_code", "")
-        expected_code = settings.PORTFOLIO_SECRET_CODE
-        if not expected_code or code == expected_code:
-            project.delete()
-            messages.success(request, "Project berhasil dihapus!")
+        project.delete()
+        messages.success(request, "Project berhasil dihapus!")
+    return redirect("main:show_projects")
+
+@login_required(login_url="/login/")
+def toggle_star(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    if request.method == "POST":
+        if request.user in project.starred_by.all():
+            project.starred_by.remove(request.user)
         else:
-            messages.error(request, "Gagal menghapus: Kode rahasia salah!")
+            project.starred_by.add(request.user)
     return redirect("main:show_projects")
 
 def get_projects_json(request):
@@ -130,15 +150,14 @@ def get_projects_json(request):
     projects = Project.objects.all()
     if title_query:
         projects = projects.filter(title__icontains=title_query)
-    projects_json = serializers.serialize("json", projects)
+    projects_json = serializers.serialize("json", projects, use_natural_foreign_keys=True)
     return HttpResponse(projects_json, content_type="application/json")
 
 def show_projects(request):
-    # Pola data delivery: ambil response serialize JSON, lalu deserialize ke objek Python
-    json_response = get_projects_json(request)
-    deserialized = serializers.deserialize("json", json_response.content.decode("utf-8"))
-    projects = [p.object for p in deserialized]
     title_query = request.GET.get("title", "").strip()
+    projects = Project.objects.all().prefetch_related("starred_by")
+    if title_query:
+        projects = projects.filter(title__icontains=title_query)
 
     context = {
         "name": NAME,
@@ -216,3 +235,41 @@ def delete_skill(request, skill_id):
         else:
             messages.error(request, "Gagal menghapus: Kode rahasia salah!")
     return redirect("main:show_skills")
+
+
+# Authentication Views
+def register(request):
+    form = UserCreationForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Your account has been successfully created!")
+        return redirect("main:login")
+    
+    context = {
+        "name": NAME,
+        "form": form,
+    }
+    return render(request, "register.html", context)
+
+
+def login_user(request):
+    form = AuthenticationForm(request, data=request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.get_user()
+        login(request, user)
+        response = redirect("main:show_main")
+        response.set_cookie('last_login', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        return response
+    
+    context = {
+        "name": NAME,
+        "form": form,
+    }
+    return render(request, "login.html", context)
+
+
+def logout_user(request):
+    logout(request)
+    response = redirect("main:show_main")
+    response.delete_cookie('last_login')
+    return response

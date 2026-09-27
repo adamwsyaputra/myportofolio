@@ -12,9 +12,11 @@
         <p class="hero-kicker">KARYA YANG SAYA BANGUN</p>
         <h1 class="section-title" style="margin-bottom: 0;">Projects</h1>
       </div>
+      {% if user.is_superuser %}
       <a href="{% url 'main:create_project' %}" class="comic-btn comic-btn-primary">
         + Tambah Proyek
       </a>
+      {% endif %}
     </div>
 
     <form method="get" action="{% url 'main:show_projects' %}" class="project-search">
@@ -44,18 +46,25 @@
               <span>{{ project.tech_stack }}</span>
             </div>
             <div class="project-card-actions">
-              {% if project.project_url %}
-                <a href="{{ project.project_url }}" target="_blank" rel="noreferrer" class="comic-btn comic-btn-sm comic-btn-dark">
-                  Lihat Proyek &rarr;
-                </a>
-              {% else %}
-                <span></span>
-              {% endif %}
-              <div class="project-card-actions_manage">
-                <a href="{% url 'main:update_project' project.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
-                  Edit
-                </a>
-                {% include "components/project_delete_modal.html" with project=project %}
+              <div class="project-card-actions_top">
+                {% if project.project_url %}
+                  <a href="{{ project.project_url }}" target="_blank" rel="noreferrer" class="comic-btn comic-btn-sm comic-btn-dark">
+                    Lihat Proyek &rarr;
+                  </a>
+                {% else %}
+                  <span></span>
+                {% endif %}
+                <div class="project-card-actions_manage">
+                  {% if user.is_superuser %}
+                    <a href="{% url 'main:update_project' project.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
+                      Edit
+                    </a>
+                    {% include "components/project_delete_modal.html" with project=project %}
+                  {% endif %}
+                </div>
+              </div>
+              <div class="project-card-actions_bottom">
+                {% include "components/project_star.html" with project=project %}
               </div>
             </div>
           </div>
