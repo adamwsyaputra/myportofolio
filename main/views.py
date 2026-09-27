@@ -198,7 +198,7 @@ def get_skills_json(request):
     skills = Skill.objects.all().order_by("-is_core", "-proficiency_percent")
     if category_query:
         skills = skills.filter(category=category_query)
-    skills_json = serializers.serialize("json", skills)
+    skills_json = serializers.serialize("json", skills, use_natural_foreign_keys=True)
     return HttpResponse(skills_json, content_type="application/json")
 
 # 2. Display: Fetch JSON & deserialize to Python objects

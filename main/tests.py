@@ -697,6 +697,16 @@ class SkillTest(TestCase):
         self.assertContains(response_admin, f'popovertarget="delete-skill-{self.skill.id}"')
         self.assertContains(response_admin, f'action="{endorse_url}"')
 
+    def test_api_skills_use_natural_foreign_keys(self):
+        import json
+        self.skill.starred_by.add(self.regular_user)
+        response = self.client.get(reverse("main:get_skills_json"))
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content.decode("utf-8"))
+        starred_skill = next(item for item in data if item["pk"] == str(self.skill.id))
+        self.assertEqual(starred_skill["fields"]["starred_by"], [["regular_skill"]])
+
+
 
 
 class RoleArchitectureTest(TestCase):
