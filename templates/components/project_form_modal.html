@@ -1,0 +1,57 @@
+<div id="add-project-modal"
+     class="project-form-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="add-project-modal-title">
+  <button type="button"
+          class="project-form-modal_backdrop"
+          popovertarget="add-project-modal"
+          popovertargetaction="hide"
+          aria-label="Tutup modal"></button>
+  <div class="project-form-modal_content">
+    <button type="button"
+            class="project-form-modal_close"
+            popovertarget="add-project-modal"
+            popovertargetaction="hide"
+            aria-label="Tutup modal">&times;</button>
+    <div class="comic-badge-banner" style="margin-bottom: 0.5rem;">
+      <span class="comic-dot red"></span>
+      <span class="comic-dot yellow"></span>
+      <span class="comic-dot green"></span>
+      <code class="comic-header-tag">CONSOLE // CREATE-PROJECT</code>
+    </div>
+    <p class="hero-kicker" style="margin-bottom: 0.25rem;">TAMBAHKAN PROYEK BARU</p>
+    <h2 id="add-project-modal-title" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.5rem; margin-bottom: 1.25rem; color: var(--ink);">
+      Tambah Proyek
+    </h2>
+
+    <form id="project-form" method="post" action="{% url 'main:create_project' %}" class="project-form">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <span class="form-help-text">{{ field.help_text }}</span>
+          {% endif %}
+          {% for error in field.errors %}
+            <p class="form-error">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <div class="form-actions-group" style="margin-top: 1.75rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button"
+                class="comic-btn comic-btn-secondary"
+                popovertarget="add-project-modal"
+                popovertargetaction="hide">
+          Batal
+        </button>
+        <button type="submit" class="comic-btn comic-btn-primary">
+          Tambah Proyek
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

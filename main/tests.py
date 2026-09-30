@@ -195,27 +195,39 @@ class ProjectTest(TestCase):
         self.assertContains(response, f'href="{reverse("main:show_main")}"')
 
     def test_projects_page_displays_model_data(self):
+        # show_projects serves an empty HTML shell; project_list is decoupled from context
         response = self.client.get(reverse("main:show_projects"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.project.title)
-        self.assertContains(response, self.project.description)
-        self.assertContains(response, self.project.tech_stack)
+        self.assertNotIn("project_list", response.context)
+        # Static project card content is not server-rendered
+        self.assertNotContains(response, self.project.title)
+        # Assert state containers exist
+        self.assertContains(response, 'id="loading"')
+        self.assertContains(response, 'id="grid"')
+        self.assertContains(response, 'id="empty"')
+        self.assertContains(response, 'id="error"')
 
     def test_empty_projects_page(self):
         Project.objects.all().delete()
         response = self.client.get(reverse("main:show_projects"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Belum ada proyek yang ditambahkan.")
+        self.assertContains(response, 'id="empty"')
+        self.assertContains(response, "Belum ada proyek...")
 
     def test_project_model_str(self):
         self.assertEqual(str(self.project), "EduText AI")
 
     def test_projects_page_contains_edit_link(self):
+        # In the AJAX shell, individual edit links are rendered dynamically via JavaScript.
+        # Verify that the server-rendered shell provides the superuser controls and modal.
         self.client.login(username="admin_proj", password="AdminPassword123!")
         response = self.client.get(reverse("main:show_projects"))
         self.assertEqual(response.status_code, 200)
-        edit_url = reverse("main:update_project", args=[self.project.id])
-        self.assertContains(response, f'href="{edit_url}"')
+        self.assertContains(response, 'const IS_SUPERUSER = "true" === "true";')
+        self.assertContains(response, "Tambah Proyek")
+        self.assertContains(response, 'popovertarget="add-project-modal"')
+        self.assertContains(response, 'id="add-project-modal"')
+        self.assertIn("form", response.context)
 
     def test_update_project_get(self):
         self.client.login(username="admin_proj", password="AdminPassword123!")
@@ -447,34 +459,40 @@ class ProjectPermissionTest(TestCase):
         self.assertEqual(self.project.title, "Secured Project Edited by Editor")
 
     def test_projects_page_ui_controls_visitor_vs_superuser(self):
-        edit_url = reverse("main:update_project", args=[self.project.id])
-
         # Anonymous visitor
         response = self.client.get(reverse("main:show_projects"))
-        self.assertNotContains(response, "+ Tambah Proyek")
-        self.assertNotContains(response, f'href="{edit_url}"')
-        self.assertNotContains(response, f'popovertarget="delete-project-{self.project.id}"')
+        self.assertNotContains(response, "Tambah Proyek")
+        self.assertNotContains(response, 'id="add-project-modal"')
+        self.assertNotContains(response, 'popovertarget="add-project-modal"')
+        self.assertContains(response, 'const IS_SUPERUSER = "false" === "true";')
+        self.assertContains(response, 'const IS_EDITOR = "false" === "true";')
 
         # Regular user
         self.client.login(username="regular", password="RegularPassword123!")
         response = self.client.get(reverse("main:show_projects"))
-        self.assertNotContains(response, "+ Tambah Proyek")
-        self.assertNotContains(response, f'href="{edit_url}"')
-        self.assertNotContains(response, f'popovertarget="delete-project-{self.project.id}"')
+        self.assertNotContains(response, "Tambah Proyek")
+        self.assertNotContains(response, 'id="add-project-modal"')
+        self.assertNotContains(response, 'popovertarget="add-project-modal"')
+        self.assertContains(response, 'const IS_SUPERUSER = "false" === "true";')
+        self.assertContains(response, 'const IS_EDITOR = "false" === "true";')
 
         # Editor user
         self.client.login(username="editor_proj", password="EditorPassword123!")
         response_ed = self.client.get(reverse("main:show_projects"))
-        self.assertNotContains(response_ed, "+ Tambah Proyek")
-        self.assertContains(response_ed, f'href="{edit_url}"')
-        self.assertNotContains(response_ed, f'popovertarget="delete-project-{self.project.id}"')
+        self.assertNotContains(response_ed, "Tambah Proyek")
+        self.assertNotContains(response_ed, 'id="add-project-modal"')
+        self.assertNotContains(response_ed, 'popovertarget="add-project-modal"')
+        self.assertContains(response_ed, 'const IS_SUPERUSER = "false" === "true";')
+        self.assertContains(response_ed, 'const IS_EDITOR = "true" === "true";')
 
         # Superuser
         self.client.login(username="adminuser", password="AdminPassword123!")
         response = self.client.get(reverse("main:show_projects"))
-        self.assertContains(response, "+ Tambah Proyek")
-        self.assertContains(response, f'href="{edit_url}"')
-        self.assertContains(response, f'popovertarget="delete-project-{self.project.id}"')
+        self.assertContains(response, "Tambah Proyek")
+        self.assertContains(response, 'popovertarget="add-project-modal"')
+        self.assertContains(response, 'id="add-project-modal"')
+        self.assertContains(response, 'const IS_SUPERUSER = "true" === "true";')
+        self.assertContains(response, 'const IS_EDITOR = "true" === "true";')
 
 
 class ProjectStarTest(TestCase):
@@ -513,30 +531,35 @@ class ProjectStarTest(TestCase):
         self.assertEqual(self.project.starred_by.count(), 0)
 
     def test_star_button_ui_rendering(self):
-        star_url = reverse("main:toggle_star", args=[self.project.id])
-
+        # In the AJAX architecture, star state and counts are delivered via get_projects_json
         # Initially unstarred
-        response = self.client.get(reverse("main:show_projects"))
-        self.assertContains(response, f'action="{star_url}"')
-        self.assertContains(response, "Star")
-        self.assertContains(response, '<span class="star-count">0</span>')
+        res_unstarred = self.client.get(reverse("main:get_projects_json"))
+        self.assertEqual(res_unstarred.status_code, 200)
+        data = res_unstarred.json()
+        proj = next(item for item in data if item["pk"] == str(self.project.id))
+        self.assertEqual(proj["fields"]["star_count"], 0)
+        self.assertFalse(proj["fields"]["is_starred"])
 
         # Star the project
         self.project.starred_by.add(self.user)
         self.client.login(username="staruser", password="StarPassword123!")
-        response_starred = self.client.get(reverse("main:show_projects"))
-        self.assertContains(response_starred, "is-starred")
-        self.assertContains(response_starred, "Unstar")
-        self.assertContains(response_starred, '<span class="star-count">1</span>')
+        res_starred = self.client.get(reverse("main:get_projects_json"))
+        data_starred = res_starred.json()
+        proj_starred = next(item for item in data_starred if item["pk"] == str(self.project.id))
+        self.assertEqual(proj_starred["fields"]["star_count"], 1)
+        self.assertTrue(proj_starred["fields"]["is_starred"])
+        self.assertIn("staruser", proj_starred["fields"]["starred_by_names"])
 
     def test_api_projects_use_natural_foreign_keys(self):
-        import json
+        # Tutorial 5 replaced natural foreign keys with optimized manual JSON assembly
         self.project.starred_by.add(self.user)
         response = self.client.get(reverse("main:get_projects_json"))
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.content.decode("utf-8"))
+        self.assertTrue(response["Content-Type"].startswith("application/json"))
+        data = response.json()
         starred_project = next(item for item in data if item["pk"] == str(self.project.id))
-        self.assertEqual(starred_project["fields"]["starred_by"], [["staruser"]])
+        self.assertEqual(starred_project["fields"]["star_count"], 1)
+        self.assertIn("staruser", starred_project["fields"]["starred_by_names"])
 
 
 class SkillTest(TestCase):
@@ -757,6 +780,197 @@ class RoleArchitectureTest(TestCase):
         self.assertFalse(is_editor(self.regular_user))
         self.assertTrue(is_editor(self.editor_user))
         self.assertTrue(is_editor(self.superuser))
+
+
+class ProjectAjaxRoutesTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Group, User
+        self.editor_group = Group.objects.create(name="Editor")
+
+        self.superuser = User.objects.create_superuser(
+            username="ajax_admin",
+            password="AdminPassword123!",
+        )
+        self.regular_user = User.objects.create_user(
+            username="ajax_regular",
+            password="RegularPassword123!",
+        )
+        self.editor_user = User.objects.create_user(
+            username="ajax_editor",
+            password="EditorPassword123!",
+        )
+        self.editor_user.groups.add(self.editor_group)
+
+        self.project = Project.objects.create(
+            title="EduText AI",
+            description="Platform aksesibilitas AI melalui jaringan SMS 2G.",
+            tech_stack="Python, Twilio, OpenAI",
+            project_url="https://github.com/adamwsyaputra/sms-ai",
+            project_image_url="https://images.unsplash.com/photo-ai.jpg",
+        )
+
+    # 1. get_projects_json tests
+    def test_get_projects_json_returns_200_and_json(self):
+        url = reverse("main:get_projects_json")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response["Content-Type"].startswith("application/json"))
+
+    def test_get_projects_json_fields_and_unstarred_state(self):
+        url = reverse("main:get_projects_json")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsInstance(data, list)
+        self.assertGreaterEqual(len(data), 1)
+
+        item = next(p for p in data if p["pk"] == str(self.project.id))
+        fields = item["fields"]
+        self.assertEqual(fields["title"], "EduText AI")
+        self.assertEqual(fields["description"], "Platform aksesibilitas AI melalui jaringan SMS 2G.")
+        self.assertEqual(fields["tech_stack"], "Python, Twilio, OpenAI")
+        self.assertEqual(fields["project_url"], "https://github.com/adamwsyaputra/sms-ai")
+        self.assertEqual(fields["project_image_url"], "https://images.unsplash.com/photo-ai.jpg")
+        self.assertIn("star_count", fields)
+        self.assertIn("is_starred", fields)
+        self.assertIn("starred_by_names", fields)
+        self.assertEqual(fields["star_count"], 0)
+        self.assertFalse(fields["is_starred"])
+
+    def test_get_projects_json_authenticated_starred_state(self):
+        self.project.starred_by.add(self.regular_user)
+        url = reverse("main:get_projects_json")
+
+        # Anonymous visitor sees star count but is_starred=False
+        anon_resp = self.client.get(url)
+        anon_item = next(p for p in anon_resp.json() if p["pk"] == str(self.project.id))
+        self.assertEqual(anon_item["fields"]["star_count"], 1)
+        self.assertFalse(anon_item["fields"]["is_starred"])
+
+        # Authenticated starer sees is_starred=True
+        self.client.login(username="ajax_regular", password="RegularPassword123!")
+        auth_resp = self.client.get(url)
+        auth_item = next(p for p in auth_resp.json() if p["pk"] == str(self.project.id))
+        self.assertEqual(auth_item["fields"]["star_count"], 1)
+        self.assertTrue(auth_item["fields"]["is_starred"])
+        self.assertIn("ajax_regular", auth_item["fields"]["starred_by_names"])
+
+    def test_get_projects_json_title_search_filter(self):
+        Project.objects.create(
+            title="Comic Canvas App",
+            description="Comic book editor.",
+            tech_stack="TypeScript, React",
+        )
+        url = reverse("main:get_projects_json")
+
+        # Query matching 'EduText'
+        resp_edu = self.client.get(url, {"title": "EduText"})
+        data_edu = resp_edu.json()
+        self.assertEqual(len(data_edu), 1)
+        self.assertEqual(data_edu[0]["fields"]["title"], "EduText AI")
+
+        # Query matching 'Canvas'
+        resp_comic = self.client.get(url, {"title": "Canvas"})
+        data_comic = resp_comic.json()
+        self.assertEqual(len(data_comic), 1)
+        self.assertEqual(data_comic[0]["fields"]["title"], "Comic Canvas App")
+
+        # Query non-matching
+        resp_none = self.client.get(url, {"title": "NonExistentTermXYZ"})
+        self.assertEqual(resp_none.json(), [])
+
+    # 2. create_project_ajax tests
+    def test_create_project_ajax_superuser_receives_201_and_pk(self):
+        self.client.login(username="ajax_admin", password="AdminPassword123!")
+        url = reverse("main:create_project_ajax")
+        payload = {
+            "title": "Quantum Leap Simulation",
+            "description": "Simulasi komputasi kuantum dalam peramban web.",
+            "tech_stack": "Python, Qiskit, WebAssembly",
+            "project_url": "https://github.com/adamwsyaputra/quantum",
+            "project_image_url": "https://example.com/quantum.png",
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response["Content-Type"].startswith("application/json"))
+
+        data = response.json()
+        self.assertIn("message", data)
+        self.assertIn("pk", data)
+
+        created = Project.objects.get(id=data["pk"])
+        self.assertEqual(created.title, "Quantum Leap Simulation")
+        self.assertEqual(created.tech_stack, "Python, Qiskit, WebAssembly")
+
+    def test_create_project_ajax_non_superuser_receives_403(self):
+        url = reverse("main:create_project_ajax")
+        payload = {
+            "title": "Hacked Project",
+            "description": "Attempt to bypass permission.",
+            "tech_stack": "Malware",
+        }
+
+        # 1. Anonymous visitor
+        anon_resp = self.client.post(url, payload)
+        self.assertEqual(anon_resp.status_code, 403)
+        self.assertIn("message", anon_resp.json())
+
+        # 2. Regular user
+        self.client.login(username="ajax_regular", password="RegularPassword123!")
+        reg_resp = self.client.post(url, payload)
+        self.assertEqual(reg_resp.status_code, 403)
+        self.assertIn("message", reg_resp.json())
+
+        # 3. Editor user (non-superuser)
+        self.client.login(username="ajax_editor", password="EditorPassword123!")
+        ed_resp = self.client.post(url, payload)
+        self.assertEqual(ed_resp.status_code, 403)
+        self.assertIn("message", ed_resp.json())
+
+        # Confirm not created in database
+        self.assertFalse(Project.objects.filter(title="Hacked Project").exists())
+
+    def test_create_project_ajax_invalid_inputs_returns_400_with_errors(self):
+        self.client.login(username="ajax_admin", password="AdminPassword123!")
+        url = reverse("main:create_project_ajax")
+
+        # Empty required fields
+        payload = {
+            "title": "",
+            "description": "",
+            "tech_stack": "",
+            "project_url": "not-a-valid-url",
+            "project_image_url": "not-a-valid-url",
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(response["Content-Type"].startswith("application/json"))
+
+        data = response.json()
+        self.assertIn("errors", data)
+        self.assertIn("title", data["errors"])
+        self.assertIn("description", data["errors"])
+        self.assertIn("tech_stack", data["errors"])
+
+    def test_create_project_ajax_cleanses_xss_inputs(self):
+        self.client.login(username="ajax_admin", password="AdminPassword123!")
+        url = reverse("main:create_project_ajax")
+        payload = {
+            "title": "<script>alert('pwned')</script>Cleaned Title",
+            "description": "<div>Safe description text.</div>",
+            "tech_stack": "<b>Django</b>, <i>AJAX</i>",
+            "project_url": "https://github.com/safe",
+            "project_image_url": "",
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 201)
+
+        data = response.json()
+        saved = Project.objects.get(id=data["pk"])
+        self.assertEqual(saved.title, "alert('pwned')Cleaned Title")
+        self.assertEqual(saved.description, "Safe description text.")
+        self.assertEqual(saved.tech_stack, "Django, AJAX")
+
 
 
 
