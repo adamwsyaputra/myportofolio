@@ -13,11 +13,21 @@
         <h1 class="section-title">Skills & Capabilities</h1>
       </div>
       {% if user.is_superuser %}
-        <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">
+        <button type="button" class="social-link" popovertarget="add-skill-modal">
           + Tambah Skill
-        </a>
+        </button>
       {% endif %}
     </div>
+
+    <!-- Live Search Input Bar -->
+    <form id="skill-search-form" class="project-search">
+      <input type="search"
+             id="skill-search-input"
+             name="q"
+             placeholder="Cari berdasarkan nama keahlian..."
+             class="project-search_input">
+      <button type="submit" class="social-link">Cari</button>
+    </form>
 
     <!-- Category Filter Bar -->
     <div class="comic-filter-bar">
@@ -38,70 +48,11 @@
       </a>
     </div>
 
-    <div class="skills-grid">
-      {% for skill in skill_list %}
-        <article class="skill-card">
-          <div class="skill-card-topbar">
-            <span class="comic-category-tag">{{ skill.get_category_display }}</span>
-            {% if skill.is_core %}
-              <span class="comic-badge-core">&#9733; CORE</span>
-            {% endif %}
-          </div>
-
-          <div class="skill-identity">
-            {% if skill.logo_url %}
-              <div class="skill-logo-frame">
-                <img src="{{ skill.logo_url }}" alt="{{ skill.name }}" loading="lazy">
-              </div>
-            {% else %}
-              <div class="skill-logo-frame">
-                <div class="skill-logo-fallback">
-                  {{ skill.name|slice:":2"|upper }}
-                </div>
-              </div>
-            {% endif %}
-            <div class="skill-title-block">
-              <h2 class="skill-name">{{ skill.name }}</h2>
-            </div>
-          </div>
-
-          <div class="comic-power-box">
-            <div class="comic-power-meta">
-              <span class="comic-stat-label">PROFICIENCY</span>
-              <span class="comic-stat-val">{{ skill.proficiency_percent }}%</span>
-            </div>
-            <div class="comic-power-track" title="{{ skill.proficiency_percent }}% Proficiency">
-              <div class="comic-power-fill" style="width: {{ skill.proficiency_percent }}%;"></div>
-            </div>
-          </div>
-
-          <div class="skill-card-actions">
-            {% if user.is_superuser or is_editor %}
-              <div class="skill-card-actions_manage">
-                <a href="{% url 'main:update_skill' skill.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
-                  Edit
-                </a>
-                {% if user.is_superuser %}
-                  {% include "components/skill_delete_modal.html" with skill=skill %}
-                {% endif %}
-              </div>
-            {% endif %}
-            <div class="skill-card-actions_bottom">
-              {% include "components/skill_endorse.html" with skill=skill %}
-            </div>
-          </div>
-        </article>
-      {% empty %}
-        <div class="comic-form-panel" style="grid-column: 1 / -1; max-width: 520px; text-align: center; margin: 3rem auto;">
-          <p class="hero-kicker">EMPTY ARSENAL</p>
-          <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 0.5rem;">Belum Ada Keahlian</h2>
-          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Tambahkan keahlian pertama Anda untuk melengkapi Technical Arsenal.</p>
-          {% if user.is_superuser %}
-            <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">+ Tambah Skill Sekarang</a>
-          {% endif %}
-        </div>
-      {% endfor %}
-    </div>
+    <!-- AJAX State Elements -->
+    <div id="loading" class="empty-state hide"><p>Memuat keahlian...</p></div>
+    <div id="error" class="empty-state hide"><p>Gagal memuat data keahlian. Silakan coba lagi.</p></div>
+    <div id="empty" class="empty-state hide"><p>Belum ada keahlian yang ditambahkan atau ditemukan.</p></div>
+    <div id="skills-grid" class="skills-grid hide"></div>
   </div>
 </section>
 {% endblock content %}
