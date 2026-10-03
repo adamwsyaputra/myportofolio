@@ -108,6 +108,15 @@ class ExperienceForm(ModelForm):
         if self.instance and self.instance.pk:
             self.fields["is_ongoing"].initial = self.instance.is_ongoing
 
+    def clean_title(self):
+        title = strip_tags(self.cleaned_data.get("title", "")).strip()
+        if not title:
+            raise ValidationError("Judul pengalaman tidak boleh kosong atau hanya berisi tag HTML.")
+        return title
+
+    def clean_description(self):
+        return strip_tags(self.cleaned_data.get("description", "")).strip()
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         is_ongoing = self.cleaned_data.get("is_ongoing")

@@ -37,18 +37,61 @@ def show_main(request):
     return render(request, "index.html", context)
 
 # Experience field
-def show_experience(request):
+def get_experience_json(request):
+    search_query = request.GET.get("q", "").strip() or request.GET.get("title", "").strip()
     category_query = request.GET.get("category", "").strip()
-    experiences = Experience.objects.all().prefetch_related("vouched_by").order_by("-started_at")
+
+    experiences = Experience.objects.prefetch_related("vouched_by").all().order_by("-started_at")
+
+    if search_query:
+        experiences = experiences.filter(title__icontains=search_query)
     if category_query:
         experiences = experiences.filter(category=category_query)
+
+    data = []
+    for exp in experiences:
+        vouched_users = exp.vouched_by.all()
+        is_vouched = request.user in vouched_users if request.user.is_authenticated else False
+        data.append({
+            "pk": str(exp.id),
+            "fields": {
+                "title": exp.title,
+                "description": exp.description,
+                "category": exp.category,
+                "category_display": exp.get_category_display(),
+                "thumbnail": exp.thumbnail,
+                "started_at": exp.started_at.isoformat() if exp.started_at else None,
+                "ended_at": exp.ended_at.isoformat() if exp.ended_at else None,
+                "is_ongoing": exp.is_ongoing,
+                "vouch_count": vouched_users.count(),
+                "is_vouched": is_vouched,
+                "vouched_by_names": ", ".join([u.username for u in vouched_users]),
+            }
+        })
+    return JsonResponse(data, safe=False)
+
+def show_experience(request):
+    category_query = request.GET.get("category", "").strip()
     context = {
         "name": NAME,
-        "experience_list": experiences,
         "selected_category": category_query,
         "is_editor": is_editor(request.user),
+        "form": ExperienceForm(),
     }
     return render(request, "experience.html", context)
+
+@require_POST
+def create_experience_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse({"message": "Forbidden. Superuser access required."}, status=403)
+
+    form = ExperienceForm(request.POST)
+    if form.is_valid():
+        experience = form.save()
+        return JsonResponse({"message": "Pengalaman baru berhasil ditambahkan!", "pk": str(experience.id)}, status=201)
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
 
 @login_required(login_url="/login/")
 def create_experience(request):
