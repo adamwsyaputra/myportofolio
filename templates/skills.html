@@ -55,4 +55,8 @@
     <div id="skills-grid" class="skills-grid hide"></div>
   </div>
 </section>
+
+{% if user.is_superuser %}
+  {% include 'components/skill_form_modal.html' %}
+{% endif %}
 {% endblock content %}
