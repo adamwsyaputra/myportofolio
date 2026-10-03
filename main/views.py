@@ -148,8 +148,28 @@ def toggle_vouch_experience(request, experience_id):
     if request.method == "POST":
         if request.user in experience.vouched_by.all():
             experience.vouched_by.remove(request.user)
+            is_vouched = False
+            msg = f"You removed your vouch for {experience.title}."
         else:
             experience.vouched_by.add(request.user)
+            is_vouched = True
+            msg = f"You vouched for {experience.title}."
+
+        is_ajax = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if is_ajax:
+            vouched_users = experience.vouched_by.all()
+            return JsonResponse({
+                "status": "success",
+                "is_vouched": is_vouched,
+                "vouch_count": vouched_users.count(),
+                "vouched_by_names": ", ".join([u.username for u in vouched_users]),
+                "title": experience.title,
+                "message": msg,
+            })
+
     return redirect("main:show_experience")
 
 
@@ -225,8 +245,28 @@ def toggle_star(request, project_id):
     if request.method == "POST":
         if request.user in project.starred_by.all():
             project.starred_by.remove(request.user)
+            is_starred = False
+            msg = f"You unstarred {project.title}."
         else:
             project.starred_by.add(request.user)
+            is_starred = True
+            msg = f"You starred {project.title}."
+
+        is_ajax = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if is_ajax:
+            starred_users = project.starred_by.all()
+            return JsonResponse({
+                "status": "success",
+                "is_starred": is_starred,
+                "star_count": starred_users.count(),
+                "starred_by_names": ", ".join([u.username for u in starred_users]),
+                "title": project.title,
+                "message": msg,
+            })
+
     return redirect("main:show_projects")
 
 def get_projects_json(request):
@@ -372,8 +412,28 @@ def toggle_endorse_skill(request, skill_id):
     if request.method == "POST":
         if request.user in skill.starred_by.all():
             skill.starred_by.remove(request.user)
+            is_starred = False
+            msg = f"You removed your endorsement from {skill.name}."
         else:
             skill.starred_by.add(request.user)
+            is_starred = True
+            msg = f"You endorsed {skill.name}."
+
+        is_ajax = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if is_ajax:
+            starred_users = skill.starred_by.all()
+            return JsonResponse({
+                "status": "success",
+                "is_starred": is_starred,
+                "star_count": starred_users.count(),
+                "starred_by_names": ", ".join([u.username for u in starred_users]),
+                "name": skill.name,
+                "message": msg,
+            })
+
     return redirect("main:show_skills")
 
 toggle_star_skill = toggle_endorse_skill

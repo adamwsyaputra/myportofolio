@@ -181,14 +181,77 @@
             <button type="submit"
                     class="button button-vouch${exp.is_vouched ? ' is-vouched' : ''}"
                     title="${vouchTitle}">
-              <span aria-hidden="true">${exp.is_vouched ? '&#10003;' : '+'}</span>
-              ${exp.is_vouched ? 'Vouched' : 'Vouch'}
+              <span class="vouch-icon" aria-hidden="true">${exp.is_vouched ? '&#10003;' : '+'}</span>
+              <span class="vouch-label">${exp.is_vouched ? 'Vouched' : 'Vouch'}</span>
               <span class="vouch-count star-count">${exp.vouch_count}</span>
             </button>
           </form>
         </div>
       </div>
     `;
+
+    const vouchForm = card.querySelector('.vouch-form');
+    if (vouchForm) {
+      vouchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = vouchForm.querySelector('button[type="submit"]');
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
+
+        try {
+          const resp = await fetch(vouchUrl, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken'),
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          });
+
+          if (resp.redirected || resp.url.includes('/login')) {
+            window.location.href = resp.url || "{% url 'main:login' %}";
+            return;
+          }
+
+          if (resp.ok) {
+            const data = await resp.json();
+            btn.classList.toggle('is-vouched', data.is_vouched);
+
+            const iconSpan = btn.querySelector('.vouch-icon');
+            if (iconSpan) {
+              iconSpan.innerHTML = data.is_vouched ? '&#10003;' : '+';
+            }
+
+            const labelSpan = btn.querySelector('.vouch-label');
+            if (labelSpan) {
+              labelSpan.textContent = data.is_vouched ? 'Vouched' : 'Vouch';
+            }
+
+            const countSpan = btn.querySelector('.vouch-count');
+            if (countSpan) {
+              countSpan.textContent = data.vouch_count;
+            }
+
+            btn.title = data.vouched_by_names
+              ? `Vouched by ${data.vouched_by_names}`
+              : 'Be the first to vouch for this role';
+
+            if (data.is_vouched) {
+              showToast('Vouched!', `You vouched for ${data.title || exp.title}.`, 'normal');
+            } else {
+              showToast('Vouch Removed', `You removed your vouch for ${data.title || exp.title}.`, 'normal');
+            }
+          } else {
+            showToast('Error', 'Gagal memperbarui vouch.', 'error');
+          }
+        } catch (err) {
+          console.error('Error toggling vouch:', err);
+          showToast('Error', 'Terjadi kesalahan jaringan.', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
 
     return card;
   }

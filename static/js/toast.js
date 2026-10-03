@@ -1,105 +1,178 @@
-let toastTimer;
+/**
+ * Features: Stacking upwards, independent in/out animations, auto-dismiss, and hover-to-pause
+ * Integrated with Top Layer (popover="manual") to render cleanly above modals and backdrops.
+ */
 
-function hideToastManual() {
-  const toastComponent = document.getElementById('toast-component');
-  if (!toastComponent) return;
+function getOrCreateToastContainer() {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    container.setAttribute('popover', 'manual');
+    container.setAttribute('aria-live', 'polite');
+    container.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(container);
+  } else if (!container.hasAttribute('popover')) {
+    container.setAttribute('popover', 'manual');
+  }
+  return container;
+}
 
-  if (toastTimer) {
-    clearTimeout(toastTimer);
+function dismissToastItem(toastEl) {
+  if (!toastEl || toastEl._isDismissing) return;
+  toastEl._isDismissing = true;
+
+  if (toastEl._dismissTimer) {
+    clearTimeout(toastEl._dismissTimer);
   }
 
-  toastComponent.classList.remove('toast-show');
-  toastComponent.classList.add('toast-hidden');
+  // Trigger individual out-animation
+  toastEl.classList.remove('toast-enter-active');
+  toastEl.classList.add('toast-exit-active');
 
-  toastTimer = setTimeout(() => {
+  // Remove from DOM once out-animation completes
+  setTimeout(() => {
+    const container = toastEl.parentElement || document.getElementById('toast-container');
     try {
-      if (toastComponent.matches(':popover-open')) {
-        toastComponent.hidePopover();
+      if (toastEl.parentNode) {
+        toastEl.parentNode.removeChild(toastEl);
       }
     } catch (e) {
       // Safe fallback
     }
-  }, 300);
+
+    if (container) {
+      const activeToasts = container.querySelectorAll('.toast-item:not(.toast-exit-active)');
+      if (activeToasts.length === 0) {
+        try {
+          if (typeof container.hidePopover === 'function' && container.matches(':popover-open')) {
+            container.hidePopover();
+          }
+        } catch (e) {
+          // Safe fallback
+        }
+      }
+    }
+  }, 350);
 }
 
 function showToast(title, message, type = 'normal', duration = 3000) {
-  const toastComponent = document.getElementById('toast-component');
-  const toastTitle = document.getElementById('toast-title');
-  const toastMessage = document.getElementById('toast-message');
-  const toastTag = document.getElementById('toast-tag');
-  const toastIconSymbol = document.getElementById('toast-icon-symbol');
+  const container = getOrCreateToastContainer();
 
-  if (!toastComponent || !toastTitle || !toastMessage) {
-    return;
-  }
-
-  // Cancel existing timers with clearTimeout(toastTimer)
-  if (toastTimer) {
-    clearTimeout(toastTimer);
-  }
-
-  // Reset previously applied color classes before adding the active one
-  toastComponent.classList.remove('toast-normal', 'toast-success', 'toast-error');
-  toastComponent.classList.add(`toast-${type}`);
-
-  // Set content via textContent (avoids accidental HTML/XSS injection)
-  toastTitle.textContent = title;
-  toastMessage.textContent = message;
-
-  // Update comic tag and icon symbol if elements exist
-  if (toastTag) {
-    if (type === 'success') {
-      toastTag.textContent = 'SUCCESS // VERIFIED';
-    } else if (type === 'error') {
-      toastTag.textContent = 'ALERT // ATTENTION';
-    } else {
-      toastTag.textContent = 'DISPATCH // SYSTEM';
-    }
-  }
-
-  if (toastIconSymbol) {
-    if (type === 'success') {
-      toastIconSymbol.textContent = '✓';
-    } else if (type === 'error') {
-      toastIconSymbol.textContent = '!';
-    } else {
-      toastIconSymbol.textContent = '★';
-    }
-  }
-
-  // Call toastComponent.showPopover()
+  // Promote container into the Top Layer so it floats above modals and backdrops
   try {
-    if (!toastComponent.matches(':popover-open')) {
-      toastComponent.showPopover();
+    if (typeof container.showPopover === 'function') {
+      if (!container.matches(':popover-open')) {
+        container.showPopover();
+      } else {
+        // Re-promote to top of the top-layer stack above any newly opened modal/dialog
+        container.hidePopover();
+        container.showPopover();
+      }
     }
   } catch (e) {
-    toastComponent.showPopover();
+    // Graceful fallback for non-popover environments
   }
 
-  // Trigger void toastComponent.offsetHeight; (forces DOM reflow so CSS transitions execute smoothly)
-  void toastComponent.offsetHeight;
+  // Limit stack to maximum 3 visible toasts to prevent overflowing viewport
+  const activeToasts = container.querySelectorAll('.toast-item:not(.toast-exit-active)');
+  if (activeToasts.length >= 3) {
+    dismissToastItem(activeToasts[0]);
+  }
 
-  // Swap .toast-hidden for .toast-show
-  toastComponent.classList.remove('toast-hidden');
-  toastComponent.classList.add('toast-show');
+  let tagText = 'DISPATCH // SYSTEM';
+  let iconSymbol = '★';
+  if (type === 'success') {
+    tagText = 'SUCCESS // VERIFIED';
+    iconSymbol = '✓';
+  } else if (type === 'error') {
+    tagText = 'ALERT // ATTENTION';
+    iconSymbol = '!';
+  }
 
-  // Use chained setTimeout calls to slide down, wait for animation (300ms), and finally execute hidePopover()
-  toastTimer = setTimeout(() => {
-    toastComponent.classList.remove('toast-show');
-    toastComponent.classList.add('toast-hidden');
+  const toastEl = document.createElement('div');
+  toastEl.className = `toast-item toast-${type}`;
+  toastEl.setAttribute('role', 'status');
 
-    toastTimer = setTimeout(() => {
-      try {
-        if (toastComponent.matches(':popover-open')) {
-          toastComponent.hidePopover();
-        }
-      } catch (e) {
-        // Safe fallback
-      }
-    }, 300);
+  toastEl.innerHTML = `
+    <div class="toast-header-bar">
+      <div class="toast-dots">
+        <span class="comic-dot red"></span>
+        <span class="comic-dot yellow"></span>
+        <span class="comic-dot green"></span>
+      </div>
+      <span class="toast-badge-tag">${tagText}</span>
+      <button type="button" class="toast-close-btn" aria-label="Dismiss notification">&times;</button>
+    </div>
+    <div class="toast-body">
+      <div class="toast-icon-box">
+        <span class="toast-icon-symbol">${iconSymbol}</span>
+      </div>
+      <div class="toast-content">
+        <h3 class="toast-title"></h3>
+        <p class="toast-message"></p>
+      </div>
+    </div>
+  `;
+
+  // Safely assign title and message via textContent (prevent XSS injection)
+  toastEl.querySelector('.toast-title').textContent = title;
+  toastEl.querySelector('.toast-message').textContent = message;
+
+  // Dismiss button handler
+  const closeBtn = toastEl.querySelector('.toast-close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dismissToastItem(toastEl);
+    });
+  }
+
+  // Auto-dismiss timer
+  toastEl._dismissTimer = setTimeout(() => {
+    dismissToastItem(toastEl);
   }, duration);
+
+  // Pause timer on hover, resume when mouse leaves
+  toastEl.addEventListener('mouseenter', () => {
+    if (toastEl._dismissTimer) {
+      clearTimeout(toastEl._dismissTimer);
+    }
+  });
+
+  toastEl.addEventListener('mouseleave', () => {
+    if (!toastEl._isDismissing) {
+      toastEl._dismissTimer = setTimeout(() => {
+        dismissToastItem(toastEl);
+      }, duration / 2);
+    }
+  });
+
+  // Append new toast (stacks upwards due to flex-direction: column-reverse on container)
+  container.appendChild(toastEl);
+
+  // Force DOM reflow to trigger smooth in-animation
+  void toastEl.offsetHeight;
+  requestAnimationFrame(() => {
+    toastEl.classList.add('toast-enter-active');
+  });
+
+  return toastEl;
 }
 
-// Make showToast accessible globally
+// Backward compatibility helper
+function hideToastManual() {
+  const container = document.getElementById('toast-container');
+  if (container) {
+    const activeToasts = container.querySelectorAll('.toast-item:not(.toast-exit-active)');
+    if (activeToasts.length > 0) {
+      dismissToastItem(activeToasts[activeToasts.length - 1]);
+    }
+  }
+}
+
+// Global exposure
 window.showToast = showToast;
+window.dismissToastItem = dismissToastItem;
 window.hideToastManual = hideToastManual;

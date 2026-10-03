@@ -168,8 +168,8 @@
               <button type="submit"
                       class="button button-star${fields.is_starred ? ' is-starred' : ''}"
                       title="${starTitle}">
-                <span aria-hidden="true">&#9733;</span>
-                ${fields.is_starred ? 'Unstar' : 'Star'}
+                <span class="star-icon" aria-hidden="true">&#9733;</span>
+                <span class="star-label">${fields.is_starred ? 'Unstar' : 'Star'}</span>
                 <span class="star-count">${fields.star_count}</span>
               </button>
             </form>
@@ -177,6 +177,64 @@
         </div>
       </div>
     `;
+
+    const starForm = card.querySelector('.star-form');
+    if (starForm) {
+      starForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = starForm.querySelector('button[type="submit"]');
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
+
+        try {
+          const resp = await fetch(starUrl, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken'),
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          });
+
+          if (resp.redirected || resp.url.includes('/login')) {
+            window.location.href = resp.url || "{% url 'main:login' %}";
+            return;
+          }
+
+          if (resp.ok) {
+            const data = await resp.json();
+            btn.classList.toggle('is-starred', data.is_starred);
+
+            const labelSpan = btn.querySelector('.star-label');
+            if (labelSpan) {
+              labelSpan.textContent = data.is_starred ? 'Unstar' : 'Star';
+            }
+
+            const countSpan = btn.querySelector('.star-count');
+            if (countSpan) {
+              countSpan.textContent = data.star_count;
+            }
+
+            btn.title = data.starred_by_names
+              ? `Starred by ${data.starred_by_names}`
+              : 'Be the first to star';
+
+            if (data.is_starred) {
+              showToast('Starred!', `You starred ${data.title || project.title}.`, 'normal');
+            } else {
+              showToast('Unstarred', `You unstarred ${data.title || project.title}.`, 'normal');
+            }
+          } else {
+            showToast('Error', 'Gagal memperbarui star.', 'error');
+          }
+        } catch (err) {
+          console.error('Error toggling star:', err);
+          showToast('Error', 'Terjadi kesalahan jaringan.', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
 
     return card;
   }

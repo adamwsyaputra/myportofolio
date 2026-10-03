@@ -1,21 +1,4 @@
 {% load static %}
-<div id="toast-component" class="toast-component toast-hidden" popover="manual">
-  <div class="toast-header-bar">
-    <div class="toast-dots">
-      <span class="comic-dot red"></span>
-      <span class="comic-dot yellow"></span>
-      <span class="comic-dot green"></span>
-    </div>
-    <span id="toast-tag" class="toast-badge-tag">STATUS // DISPATCH</span>
-    <button type="button" class="toast-close-btn" aria-label="Dismiss notification" onclick="hideToastManual()">&times;</button>
-  </div>
-  <div class="toast-body">
-    <div id="toast-icon-box" class="toast-icon-box">
-      <span id="toast-icon-symbol" class="toast-icon-symbol">★</span>
-    </div>
-    <div class="toast-content">
-      <h3 id="toast-title" class="toast-title">Sample Title</h3>
-      <p id="toast-message" class="toast-message">Sample Message</p>
-    </div>
-  </div>
+<div id="toast-container" class="toast-container" popover="manual" aria-live="polite" aria-atomic="true">
+  <!-- Dynamic stacking toast notifications render here in top-layer -->
 </div>

@@ -201,14 +201,78 @@
             <button type="submit"
                     class="button button-endorse button-star${fields.is_starred ? ' is-endorsed is-starred' : ''}"
                     title="${starTitle}">
-              <span aria-hidden="true">${fields.is_starred ? '&#9733;' : '&#9734;'}</span>
-              ${fields.is_starred ? 'Endorsed' : 'Endorse'}
+              <span class="star-icon" aria-hidden="true">${fields.is_starred ? '&#9733;' : '&#9734;'}</span>
+              <span class="star-label">${fields.is_starred ? 'Endorsed' : 'Endorse'}</span>
               <span class="star-count endorse-count">${fields.star_count}</span>
             </button>
           </form>
         </div>
       </div>
     `;
+
+    const starForm = card.querySelector('.star-form');
+    if (starForm) {
+      starForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = starForm.querySelector('button[type="submit"]');
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
+
+        try {
+          const resp = await fetch(starUrl, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken'),
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          });
+
+          if (resp.redirected || resp.url.includes('/login')) {
+            window.location.href = resp.url || "{% url 'main:login' %}";
+            return;
+          }
+
+          if (resp.ok) {
+            const data = await resp.json();
+            btn.classList.toggle('is-starred', data.is_starred);
+            btn.classList.toggle('is-endorsed', data.is_starred);
+
+            const iconSpan = btn.querySelector('.star-icon');
+            if (iconSpan) {
+              iconSpan.innerHTML = data.is_starred ? '&#9733;' : '&#9734;';
+            }
+
+            const labelSpan = btn.querySelector('.star-label');
+            if (labelSpan) {
+              labelSpan.textContent = data.is_starred ? 'Endorsed' : 'Endorse';
+            }
+
+            const countSpan = btn.querySelector('.star-count');
+            if (countSpan) {
+              countSpan.textContent = data.star_count;
+            }
+
+            btn.title = data.starred_by_names
+              ? `Endorsed by ${data.starred_by_names}`
+              : 'Be the first to endorse';
+
+            if (data.is_starred) {
+              showToast('Endorsed!', `You endorsed ${data.name || skill.name}.`, 'normal');
+            } else {
+              showToast('Endorsement Removed', `You removed your endorsement from ${data.name || skill.name}.`, 'normal');
+            }
+          } else {
+            showToast('Error', 'Gagal memperbarui endorsement.', 'error');
+          }
+        } catch (err) {
+          console.error('Error toggling endorse:', err);
+          showToast('Error', 'Terjadi kesalahan jaringan.', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
 
     return card;
   }
