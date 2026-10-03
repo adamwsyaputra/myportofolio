@@ -83,9 +83,9 @@ Buka `http://localhost:8000` pada peramban web Anda.
 - [x] **Minggu 4**
   - [x] Tutorial 04: Authentication, Session and Cookies Implementation
   - [x] Individual Assignment 4: Authentication, Session and Cookies Implementation
-- [ ] **Minggu 5**
-  - [ ] Tutorial 05
-  - [ ] Individual Assignment 5
+- [x] **Minggu 5**
+  - [x] Tutorial 05
+  - [x] Individual Assignment 5
 - [ ] **Minggu 6**
   - [ ] Tutorial 06
   - [ ] Individual Assignment 6
@@ -103,3 +103,4 @@ Dokumentasi lengkap terkait jawaban pertanyaan reflektif, analisis keterbatasan 
 * [📄 **Individual Assignment 2 Documentation**](docs/assignment-2.md)
 * [📄 **Individual Assignment 3 Documentation**](docs/assignment-3.md)
 * [📄 **Individual Assignment 4 Documentation**](docs/assignment-4.md)
+* [📄 **Individual Assignment 5 Documentation**](docs/assignment-5.md)
