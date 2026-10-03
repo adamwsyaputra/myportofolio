@@ -68,6 +68,12 @@ class SkillForm(ModelForm):
             "is_core": CheckboxInput(attrs={"class": "form-checkbox"}),
         }
 
+    def clean_name(self):
+        name = strip_tags(self.cleaned_data.get("name", "")).strip()
+        if not name:
+            raise ValidationError("Nama skill tidak boleh kosong atau hanya berisi tag HTML.")
+        return name
+
 class ExperienceForm(ModelForm):
     is_ongoing = forms.BooleanField(
         required=False,
