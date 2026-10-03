@@ -30,7 +30,13 @@
 
     <div id="loading" class="empty-state hide"><p>Memuat projects...</p></div>
     <div id="error" class="empty-state hide"><p>Gagal memuat data projects...</p></div>
-    <div id="empty" class="empty-state hide"><p>Belum ada proyek...</p></div>
+    <div id="empty" class="empty-state has-card hide">
+      <div class="comic-empty-state">
+        <p class="hero-kicker">NO PROJECTS YET</p>
+        <h2>Belum Ada Proyek</h2>
+        <p>Belum ada proyek... Tambahkan proyek baru atau bersihkan kata kunci pencarian.</p>
+      </div>
+    </div>
     <div id="grid" class="projects-grid hide"></div>
   </div>
 </section>
@@ -49,15 +55,6 @@
 
   let projectsAbortController;
   let searchDebounceTimer;
-
-  function escapeHtml(value) {
-    return String(value ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-  }
 
   function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
     const loadingEl = document.getElementById('loading');
@@ -177,8 +174,8 @@
               <button type="submit"
                       class="button button-star${fields.is_starred ? ' is-starred' : ''}"
                       title="${starTitle}">
-                <span aria-hidden="true">&#9733;</span>
-                ${fields.is_starred ? 'Unstar' : 'Star'}
+                <span class="star-icon" aria-hidden="true">&#9733;</span>
+                <span class="star-label">${fields.is_starred ? 'Unstar' : 'Star'}</span>
                 <span class="star-count">${fields.star_count}</span>
               </button>
             </form>
@@ -186,6 +183,64 @@
         </div>
       </div>
     `;
+
+    const starForm = card.querySelector('.star-form');
+    if (starForm) {
+      starForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = starForm.querySelector('button[type="submit"]');
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
+
+        try {
+          const resp = await fetch(starUrl, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken'),
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          });
+
+          if (resp.redirected || resp.url.includes('/login')) {
+            window.location.href = resp.url || "{% url 'main:login' %}";
+            return;
+          }
+
+          if (resp.ok) {
+            const data = await resp.json();
+            btn.classList.toggle('is-starred', data.is_starred);
+
+            const labelSpan = btn.querySelector('.star-label');
+            if (labelSpan) {
+              labelSpan.textContent = data.is_starred ? 'Unstar' : 'Star';
+            }
+
+            const countSpan = btn.querySelector('.star-count');
+            if (countSpan) {
+              countSpan.textContent = data.star_count;
+            }
+
+            btn.title = data.starred_by_names
+              ? `Starred by ${data.starred_by_names}`
+              : 'Be the first to star';
+
+            if (data.is_starred) {
+              showToast('Starred!', `You starred ${data.title || project.title}.`, 'normal');
+            } else {
+              showToast('Unstarred', `You unstarred ${data.title || project.title}.`, 'normal');
+            }
+          } else {
+            showToast('Error', 'Gagal memperbarui star.', 'error');
+          }
+        } catch (err) {
+          console.error('Error toggling star:', err);
+          showToast('Error', 'Terjadi kesalahan jaringan.', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
 
     return card;
   }
@@ -268,21 +323,6 @@
     }
   }
   window.closeProjectModal = closeProjectModal;
-
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
 
   const projectForm = document.getElementById('project-form');
 

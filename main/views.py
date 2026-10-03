@@ -37,18 +37,61 @@ def show_main(request):
     return render(request, "index.html", context)
 
 # Experience field
-def show_experience(request):
+def get_experience_json(request):
+    search_query = request.GET.get("q", "").strip() or request.GET.get("title", "").strip()
     category_query = request.GET.get("category", "").strip()
-    experiences = Experience.objects.all().prefetch_related("vouched_by").order_by("-started_at")
+
+    experiences = Experience.objects.prefetch_related("vouched_by").all().order_by("-started_at")
+
+    if search_query:
+        experiences = experiences.filter(title__icontains=search_query)
     if category_query:
         experiences = experiences.filter(category=category_query)
+
+    data = []
+    for exp in experiences:
+        vouched_users = exp.vouched_by.all()
+        is_vouched = request.user in vouched_users if request.user.is_authenticated else False
+        data.append({
+            "pk": str(exp.id),
+            "fields": {
+                "title": exp.title,
+                "description": exp.description,
+                "category": exp.category,
+                "category_display": exp.get_category_display(),
+                "thumbnail": exp.thumbnail,
+                "started_at": exp.started_at.isoformat() if exp.started_at else None,
+                "ended_at": exp.ended_at.isoformat() if exp.ended_at else None,
+                "is_ongoing": exp.is_ongoing,
+                "vouch_count": vouched_users.count(),
+                "is_vouched": is_vouched,
+                "vouched_by_names": ", ".join([u.username for u in vouched_users]),
+            }
+        })
+    return JsonResponse(data, safe=False)
+
+def show_experience(request):
+    category_query = request.GET.get("category", "").strip()
     context = {
         "name": NAME,
-        "experience_list": experiences,
         "selected_category": category_query,
         "is_editor": is_editor(request.user),
+        "form": ExperienceForm(),
     }
     return render(request, "experience.html", context)
+
+@require_POST
+def create_experience_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse({"message": "Forbidden. Superuser access required."}, status=403)
+
+    form = ExperienceForm(request.POST)
+    if form.is_valid():
+        experience = form.save()
+        return JsonResponse({"message": "Pengalaman baru berhasil ditambahkan!", "pk": str(experience.id)}, status=201)
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
 
 @login_required(login_url="/login/")
 def create_experience(request):
@@ -105,8 +148,28 @@ def toggle_vouch_experience(request, experience_id):
     if request.method == "POST":
         if request.user in experience.vouched_by.all():
             experience.vouched_by.remove(request.user)
+            is_vouched = False
+            msg = f"You removed your vouch for {experience.title}."
         else:
             experience.vouched_by.add(request.user)
+            is_vouched = True
+            msg = f"You vouched for {experience.title}."
+
+        is_ajax = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if is_ajax:
+            vouched_users = experience.vouched_by.all()
+            return JsonResponse({
+                "status": "success",
+                "is_vouched": is_vouched,
+                "vouch_count": vouched_users.count(),
+                "vouched_by_names": ", ".join([u.username for u in vouched_users]),
+                "title": experience.title,
+                "message": msg,
+            })
+
     return redirect("main:show_experience")
 
 
@@ -182,8 +245,28 @@ def toggle_star(request, project_id):
     if request.method == "POST":
         if request.user in project.starred_by.all():
             project.starred_by.remove(request.user)
+            is_starred = False
+            msg = f"You unstarred {project.title}."
         else:
             project.starred_by.add(request.user)
+            is_starred = True
+            msg = f"You starred {project.title}."
+
+        is_ajax = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if is_ajax:
+            starred_users = project.starred_by.all()
+            return JsonResponse({
+                "status": "success",
+                "is_starred": is_starred,
+                "star_count": starred_users.count(),
+                "starred_by_names": ", ".join([u.username for u in starred_users]),
+                "title": project.title,
+                "message": msg,
+            })
+
     return redirect("main:show_projects")
 
 def get_projects_json(request):
@@ -225,27 +308,56 @@ def show_projects(request):
 # Skills field
 # 1. API: Retrieve data in JSON format
 def get_skills_json(request):
+    search_query = request.GET.get("q", "").strip() or request.GET.get("name", "").strip()
     category_query = request.GET.get("category", "").strip()
-    skills = Skill.objects.all().order_by("-is_core", "-proficiency_percent")
+
+    skills = Skill.objects.prefetch_related('starred_by').all().order_by("-is_core", "-proficiency_percent")
+
+    if search_query:
+        skills = skills.filter(name__icontains=search_query)
     if category_query:
         skills = skills.filter(category=category_query)
-    skills_json = serializers.serialize("json", skills, use_natural_foreign_keys=True)
-    return HttpResponse(skills_json, content_type="application/json")
 
-# 2. Display: Fetch JSON & deserialize to Python objects
+    data = []
+    for skill in skills:
+        starred_users = skill.starred_by.all()
+        is_starred = request.user in starred_users if request.user.is_authenticated else False
+        data.append({
+            "pk": str(skill.id),
+            "fields": {
+                "name": skill.name,
+                "category": skill.category,
+                "category_display": skill.get_category_display(),
+                "proficiency_percent": skill.proficiency_percent,
+                "is_core": skill.is_core,
+                "logo_url": skill.logo_url,
+                "star_count": starred_users.count(),
+                "is_starred": is_starred,
+                "starred_by_names": ", ".join([u.username for u in starred_users]),
+            }
+        })
+    return JsonResponse(data, safe=False)
+
+# 2. Display: Decoupled shell serving form and role context
 def show_skills(request):
-    json_response = get_skills_json(request)
-    deserialized = serializers.deserialize("json", json_response.content.decode("utf-8"))
-    skills = [item.object for item in deserialized]
-    category_query = request.GET.get("category", "").strip()
-
     context = {
         "name": NAME,
-        "skill_list": skills,
-        "selected_category": category_query,
         "is_editor": is_editor(request.user),
+        "form": SkillForm(),
     }
     return render(request, "skills.html", context)
+
+@require_POST
+def create_skill_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse({"message": "Hanya pemilik portofolio yang dapat menambahkan skill."}, status=403)
+
+    form = SkillForm(request.POST)
+    if form.is_valid():
+        skill = form.save()
+        return JsonResponse({"message": "Skill berhasil ditambahkan.", "pk": str(skill.id)}, status=201)
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 @login_required(login_url="/login/")
 def create_skill(request):
@@ -300,8 +412,28 @@ def toggle_endorse_skill(request, skill_id):
     if request.method == "POST":
         if request.user in skill.starred_by.all():
             skill.starred_by.remove(request.user)
+            is_starred = False
+            msg = f"You removed your endorsement from {skill.name}."
         else:
             skill.starred_by.add(request.user)
+            is_starred = True
+            msg = f"You endorsed {skill.name}."
+
+        is_ajax = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        )
+        if is_ajax:
+            starred_users = skill.starred_by.all()
+            return JsonResponse({
+                "status": "success",
+                "is_starred": is_starred,
+                "star_count": starred_users.count(),
+                "starred_by_names": ", ".join([u.username for u in starred_users]),
+                "name": skill.name,
+                "message": msg,
+            })
+
     return redirect("main:show_skills")
 
 toggle_star_skill = toggle_endorse_skill

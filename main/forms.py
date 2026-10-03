@@ -68,6 +68,12 @@ class SkillForm(ModelForm):
             "is_core": CheckboxInput(attrs={"class": "form-checkbox"}),
         }
 
+    def clean_name(self):
+        name = strip_tags(self.cleaned_data.get("name", "")).strip()
+        if not name:
+            raise ValidationError("Nama skill tidak boleh kosong atau hanya berisi tag HTML.")
+        return name
+
 class ExperienceForm(ModelForm):
     is_ongoing = forms.BooleanField(
         required=False,
@@ -101,6 +107,15 @@ class ExperienceForm(ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields["is_ongoing"].initial = self.instance.is_ongoing
+
+    def clean_title(self):
+        title = strip_tags(self.cleaned_data.get("title", "")).strip()
+        if not title:
+            raise ValidationError("Judul pengalaman tidak boleh kosong atau hanya berisi tag HTML.")
+        return title
+
+    def clean_description(self):
+        return strip_tags(self.cleaned_data.get("description", "")).strip()
 
     def save(self, commit=True):
         instance = super().save(commit=False)

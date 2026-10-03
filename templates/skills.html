@@ -13,11 +13,21 @@
         <h1 class="section-title">Skills & Capabilities</h1>
       </div>
       {% if user.is_superuser %}
-        <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">
+        <button type="button" class="social-link" popovertarget="add-skill-modal">
           + Tambah Skill
-        </a>
+        </button>
       {% endif %}
     </div>
+
+    <!-- Live Search Input Bar -->
+    <form id="skill-search-form" class="project-search">
+      <input type="search"
+             id="skill-search-input"
+             name="q"
+             placeholder="Cari berdasarkan nama keahlian..."
+             class="project-search_input">
+      <button type="submit" class="social-link">Cari</button>
+    </form>
 
     <!-- Category Filter Bar -->
     <div class="comic-filter-bar">
@@ -38,70 +48,405 @@
       </a>
     </div>
 
-    <div class="skills-grid">
-      {% for skill in skill_list %}
-        <article class="skill-card">
-          <div class="skill-card-topbar">
-            <span class="comic-category-tag">{{ skill.get_category_display }}</span>
-            {% if skill.is_core %}
-              <span class="comic-badge-core">&#9733; CORE</span>
-            {% endif %}
-          </div>
-
-          <div class="skill-identity">
-            {% if skill.logo_url %}
-              <div class="skill-logo-frame">
-                <img src="{{ skill.logo_url }}" alt="{{ skill.name }}" loading="lazy">
-              </div>
-            {% else %}
-              <div class="skill-logo-frame">
-                <div class="skill-logo-fallback">
-                  {{ skill.name|slice:":2"|upper }}
-                </div>
-              </div>
-            {% endif %}
-            <div class="skill-title-block">
-              <h2 class="skill-name">{{ skill.name }}</h2>
-            </div>
-          </div>
-
-          <div class="comic-power-box">
-            <div class="comic-power-meta">
-              <span class="comic-stat-label">PROFICIENCY</span>
-              <span class="comic-stat-val">{{ skill.proficiency_percent }}%</span>
-            </div>
-            <div class="comic-power-track" title="{{ skill.proficiency_percent }}% Proficiency">
-              <div class="comic-power-fill" style="width: {{ skill.proficiency_percent }}%;"></div>
-            </div>
-          </div>
-
-          <div class="skill-card-actions">
-            {% if user.is_superuser or is_editor %}
-              <div class="skill-card-actions_manage">
-                <a href="{% url 'main:update_skill' skill.id %}" class="comic-btn comic-btn-sm comic-btn-secondary">
-                  Edit
-                </a>
-                {% if user.is_superuser %}
-                  {% include "components/skill_delete_modal.html" with skill=skill %}
-                {% endif %}
-              </div>
-            {% endif %}
-            <div class="skill-card-actions_bottom">
-              {% include "components/skill_endorse.html" with skill=skill %}
-            </div>
-          </div>
-        </article>
-      {% empty %}
-        <div class="comic-form-panel" style="grid-column: 1 / -1; max-width: 520px; text-align: center; margin: 3rem auto;">
-          <p class="hero-kicker">EMPTY ARSENAL</p>
-          <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 0.5rem;">Belum Ada Keahlian</h2>
-          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Tambahkan keahlian pertama Anda untuk melengkapi Technical Arsenal.</p>
-          {% if user.is_superuser %}
-            <a href="{% url 'main:create_skill' %}" class="comic-btn comic-btn-primary">+ Tambah Skill Sekarang</a>
-          {% endif %}
-        </div>
-      {% endfor %}
+    <!-- AJAX State Elements -->
+    <div id="loading" class="empty-state hide"><p>Memuat keahlian...</p></div>
+    <div id="error" class="empty-state hide"><p>Gagal memuat data keahlian. Silakan coba lagi.</p></div>
+    <div id="empty" class="empty-state has-card hide">
+      <div class="comic-empty-state">
+        <p class="hero-kicker">EMPTY ARSENAL</p>
+        <h2>Belum Ada Keahlian</h2>
+        <p>Belum ada keahlian yang ditambahkan atau ditemukan. Tambahkan keahlian pertama Anda untuk melengkapi Technical Arsenal.</p>
+      </div>
     </div>
+    <div id="skills-grid" class="skills-grid hide"></div>
   </div>
 </section>
+
+{% if user.is_superuser %}
+  {% include 'components/skill_form_modal.html' %}
+{% endif %}
+
+<script>
+  const BASE_SKILLS_ENDPOINT = "{% url 'main:get_skills_json' %}";
+  const CREATE_SKILL_ENDPOINT = "{% url 'main:create_skill_ajax' %}";
+  const IS_SUPERUSER = "{{ user.is_superuser|yesno:'true,false' }}" === "true";
+  const IS_EDITOR = "{{ is_editor|yesno:'true,false' }}" === "true";
+  const CSRF_TOKEN = "{{ csrf_token }}";
+  const SEARCH_DEBOUNCE_DELAY = 300;
+
+  let skillsAbortController;
+  let searchDebounceTimer;
+  let activeCategory = "{{ selected_category|default:'' }}";
+
+  function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const emptyEl = document.getElementById('empty');
+    const gridEl = document.getElementById('skills-grid');
+
+    if (loadingEl) loadingEl.classList.toggle('hide', !showLoading);
+    if (errorEl) errorEl.classList.toggle('hide', !showError);
+    if (emptyEl) emptyEl.classList.toggle('hide', !showEmpty);
+    if (gridEl) gridEl.classList.toggle('hide', !showGrid);
+  }
+
+  function buildSkillCardElement(item) {
+    const skillId = item.pk;
+    const skill = item.fields;
+    const fields = item.fields;
+
+    const editUrl = "{% url 'main:update_skill' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', skillId);
+    const deleteUrl = "{% url 'main:delete_skill' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', skillId);
+    const starUrl = "{% url 'main:toggle_star_skill' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', skillId);
+
+    const card = document.createElement('article');
+    card.className = 'skill-card';
+
+    const coreBadgeHtml = skill.is_core
+      ? `<span class="comic-badge-core">&#9733; CORE</span>`
+      : '';
+
+    const logoHtml = skill.logo_url
+      ? `<div class="skill-logo-frame">
+           <img src="${escapeHtml(skill.logo_url)}" alt="${escapeHtml(skill.name)}" loading="lazy">
+         </div>`
+      : `<div class="skill-logo-frame">
+           <div class="skill-logo-fallback">
+             ${escapeHtml(String(skill.name ?? '').slice(0, 2).toUpperCase())}
+           </div>
+         </div>`;
+
+    let manageHtml = '';
+    if (IS_SUPERUSER || IS_EDITOR) {
+      manageHtml += `
+        <a href="${editUrl}" class="comic-btn comic-btn-sm comic-btn-secondary">
+          Edit
+        </a>
+      `;
+    }
+    if (IS_SUPERUSER) {
+      manageHtml += `
+        <button type="button"
+                class="comic-btn comic-btn-sm comic-btn-danger"
+                popovertarget="delete-skill-${skillId}"
+                aria-label="Hapus ${escapeHtml(skill.name)}"
+                title="Hapus skill">
+          Hapus
+        </button>
+
+        <div id="delete-skill-${skillId}"
+             class="project-delete-modal"
+             popover="auto"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="delete-skill-title-${skillId}">
+          <button type="button"
+                  class="project-delete-modal_backdrop"
+                  popovertarget="delete-skill-${skillId}"
+                  popovertargetaction="hide"
+                  aria-label="Tutup konfirmasi hapus"></button>
+          <div class="project-delete-modal_content">
+            <button type="button"
+                    class="project-delete-modal_close"
+                    popovertarget="delete-skill-${skillId}"
+                    popovertargetaction="hide"
+                    aria-label="Tutup konfirmasi hapus">&times;</button>
+            <p class="hero-kicker" style="margin-bottom: 0.25rem;">CONFIRM ACTION</p>
+            <h2 id="delete-skill-title-${skillId}" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-bottom: 0.75rem;">Hapus Skill?</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.25rem;">
+              Apakah Anda yakin ingin menghapus keahlian <strong>${escapeHtml(skill.name)}</strong>?
+            </p>
+
+            <form method="post" action="${deleteUrl}">
+              <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
+              <div class="project-delete-modal_actions">
+                <button type="button"
+                        class="comic-btn comic-btn-sm comic-btn-secondary"
+                        popovertarget="delete-skill-${skillId}"
+                        popovertargetaction="hide">Batal</button>
+                <button type="submit" class="comic-btn comic-btn-sm comic-btn-danger">Konfirmasi Hapus</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    const starTitle = fields.starred_by_names
+      ? `Endorsed by ${escapeHtml(fields.starred_by_names)}`
+      : 'Be the first to endorse';
+
+    card.innerHTML = `
+      <div class="skill-card-topbar">
+        <span class="comic-category-tag">${escapeHtml(skill.category_display || skill.category)}</span>
+        ${coreBadgeHtml}
+      </div>
+
+      <div class="skill-identity">
+        ${logoHtml}
+        <div class="skill-title-block">
+          <h2 class="skill-name">${escapeHtml(skill.name)}</h2>
+        </div>
+      </div>
+
+      <div class="comic-power-box">
+        <div class="comic-power-meta">
+          <span class="comic-stat-label">PROFICIENCY</span>
+          <span class="comic-stat-val">${skill.proficiency_percent}%</span>
+        </div>
+        <div class="comic-power-track" title="${skill.proficiency_percent}% Proficiency">
+          <div class="comic-power-fill" style="width: ${skill.proficiency_percent}%;"></div>
+        </div>
+      </div>
+
+      <div class="skill-card-actions">
+        ${manageHtml ? `<div class="skill-card-actions_manage">${manageHtml}</div>` : ''}
+        <div class="skill-card-actions_bottom">
+          <form method="post" action="${starUrl}" class="star-form endorse-form">
+            <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
+            <button type="submit"
+                    class="button button-endorse button-star${fields.is_starred ? ' is-endorsed is-starred' : ''}"
+                    title="${starTitle}">
+              <span class="star-icon" aria-hidden="true">${fields.is_starred ? '&#9733;' : '&#9734;'}</span>
+              <span class="star-label">${fields.is_starred ? 'Endorsed' : 'Endorse'}</span>
+              <span class="star-count endorse-count">${fields.star_count}</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    `;
+
+    const starForm = card.querySelector('.star-form');
+    if (starForm) {
+      starForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = starForm.querySelector('button[type="submit"]');
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
+
+        try {
+          const resp = await fetch(starUrl, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken'),
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          });
+
+          if (resp.redirected || resp.url.includes('/login')) {
+            window.location.href = resp.url || "{% url 'main:login' %}";
+            return;
+          }
+
+          if (resp.ok) {
+            const data = await resp.json();
+            btn.classList.toggle('is-starred', data.is_starred);
+            btn.classList.toggle('is-endorsed', data.is_starred);
+
+            const iconSpan = btn.querySelector('.star-icon');
+            if (iconSpan) {
+              iconSpan.innerHTML = data.is_starred ? '&#9733;' : '&#9734;';
+            }
+
+            const labelSpan = btn.querySelector('.star-label');
+            if (labelSpan) {
+              labelSpan.textContent = data.is_starred ? 'Endorsed' : 'Endorse';
+            }
+
+            const countSpan = btn.querySelector('.star-count');
+            if (countSpan) {
+              countSpan.textContent = data.star_count;
+            }
+
+            btn.title = data.starred_by_names
+              ? `Endorsed by ${data.starred_by_names}`
+              : 'Be the first to endorse';
+
+            if (data.is_starred) {
+              showToast('Endorsed!', `You endorsed ${data.name || skill.name}.`, 'normal');
+            } else {
+              showToast('Endorsement Removed', `You removed your endorsement from ${data.name || skill.name}.`, 'normal');
+            }
+          } else {
+            showToast('Error', 'Gagal memperbarui endorsement.', 'error');
+          }
+        } catch (err) {
+          console.error('Error toggling endorse:', err);
+          showToast('Error', 'Terjadi kesalahan jaringan.', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    return card;
+  }
+
+  async function fetchSkills(query = "") {
+    if (skillsAbortController) {
+      skillsAbortController.abort();
+    }
+
+    skillsAbortController = new AbortController();
+
+    displayPageSection({ showLoading: true });
+
+    let url = BASE_SKILLS_ENDPOINT;
+    const params = [];
+    if (query) {
+      params.push(`q=${encodeURIComponent(query)}`);
+    }
+    if (activeCategory) {
+      params.push(`category=${encodeURIComponent(activeCategory)}`);
+    }
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        signal: skillsAbortController.signal,
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const gridEl = document.getElementById('skills-grid');
+
+      if (!data || data.length === 0) {
+        displayPageSection({ showEmpty: true });
+      } else {
+        if (gridEl) {
+          gridEl.innerHTML = '';
+          data.forEach(item => {
+            const card = buildSkillCardElement(item);
+            gridEl.appendChild(card);
+          });
+        }
+        displayPageSection({ showGrid: true });
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        return;
+      }
+      console.error('Error fetching skills:', error);
+      displayPageSection({ showError: true });
+    }
+  }
+
+  const skillSearchForm = document.getElementById('skill-search-form');
+  const skillSearchInput = document.getElementById('skill-search-input');
+
+  if (skillSearchInput) {
+    skillSearchInput.addEventListener('input', () => {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        fetchSkills(skillSearchInput.value.trim());
+      }, SEARCH_DEBOUNCE_DELAY);
+    });
+  }
+
+  if (skillSearchForm) {
+    skillSearchForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      clearTimeout(searchDebounceTimer);
+      fetchSkills(skillSearchInput ? skillSearchInput.value.trim() : '');
+    });
+  }
+
+  // Category tab click event listener
+  const categoryTabs = document.querySelectorAll('.comic-filter-tab');
+  categoryTabs.forEach(tab => {
+    tab.addEventListener('click', (event) => {
+      event.preventDefault();
+      categoryTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const href = tab.getAttribute('href');
+      const urlParts = href.split('?');
+      if (urlParts.length > 1) {
+        const urlParams = new URLSearchParams(urlParts[1]);
+        activeCategory = urlParams.get('category') || '';
+      } else {
+        activeCategory = '';
+      }
+      fetchSkills(skillSearchInput ? skillSearchInput.value.trim() : '');
+    });
+  });
+
+  function closeSkillModal() {
+    const modal = document.getElementById('add-skill-modal');
+    if (modal) {
+      modal.hidePopover();
+    }
+  }
+  window.closeSkillModal = closeSkillModal;
+
+  const skillForm = document.getElementById('skill-form');
+
+  async function addSkill(event) {
+    event.preventDefault();
+    const submitBtn = skillForm.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const formData = new FormData(skillForm);
+      const response = await fetch(CREATE_SKILL_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'Accept': 'application/json',
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        skillForm.reset();
+        closeSkillModal();
+        showToast('Berhasil', 'Skill baru berhasil ditambahkan!', 'success');
+        fetchSkills(skillSearchInput ? skillSearchInput.value.trim() : '');
+      } else {
+        const errorMessages = [];
+        if (result.errors) {
+          for (const field in result.errors) {
+            if (Array.isArray(result.errors[field])) {
+              result.errors[field].forEach(err => {
+                if (err && err.message) {
+                  errorMessages.push(err.message);
+                }
+              });
+            }
+          }
+        }
+        if (errorMessages.length === 0 && result.message) {
+          errorMessages.push(result.message);
+        }
+        if (errorMessages.length === 0) {
+          errorMessages.push('Terjadi kesalahan saat menambahkan skill.');
+        }
+        showToast('Gagal menambahkan skill', errorMessages.join(' '), 'error');
+      }
+    } catch (error) {
+      console.error('Error adding skill:', error);
+      showToast('Gagal menambahkan skill', 'Terjadi kesalahan jaringan atau server.', 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  }
+
+  // Critical Null Guard
+  if (skillForm) {
+    skillForm.addEventListener('submit', addSkill);
+  }
+
+  // Initial fetch
+  fetchSkills(skillSearchInput ? skillSearchInput.value.trim() : '');
+</script>
 {% endblock content %}
