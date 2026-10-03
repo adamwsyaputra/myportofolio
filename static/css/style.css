@@ -2120,6 +2120,77 @@ h1, h2, h3, .brand {
   grid-column: 1 / -1;
 }
 
+.empty-state:has(.comic-empty-state),
+.empty-state:has(.empty-card),
+.empty-state.has-card {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  margin: 0 auto;
+}
+
+.comic-empty-state,
+.empty-card {
+  max-width: 520px;
+  margin: 2.5rem auto;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  background: var(--surface);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.comic-empty-state .hero-kicker,
+.empty-card .hero-kicker {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.comic-empty-state h2,
+.comic-empty-state .empty-state-title,
+.empty-card h2,
+.empty-card .empty-state-title {
+  font-family: "Space Grotesk", -apple-system, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 0.65rem 0;
+  line-height: 1.25;
+}
+
+.comic-empty-state p,
+.comic-empty-state .empty-state-subtitle,
+.empty-card p,
+.empty-card .empty-state-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .comic-empty-state,
+  .empty-card {
+    padding: 2rem 1.25rem;
+    margin: 1.75rem auto;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+
+  .comic-empty-state h2,
+  .comic-empty-state .empty-state-title,
+  .empty-card h2,
+  .empty-card .empty-state-title {
+    font-size: 1.25rem;
+  }
+}
+
+
 /* --- Project Form Modal Popover --- */
 .project-form-modal {
   display: none;
