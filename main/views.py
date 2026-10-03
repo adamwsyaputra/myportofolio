@@ -225,27 +225,56 @@ def show_projects(request):
 # Skills field
 # 1. API: Retrieve data in JSON format
 def get_skills_json(request):
+    search_query = request.GET.get("q", "").strip() or request.GET.get("name", "").strip()
     category_query = request.GET.get("category", "").strip()
-    skills = Skill.objects.all().order_by("-is_core", "-proficiency_percent")
+
+    skills = Skill.objects.prefetch_related('starred_by').all().order_by("-is_core", "-proficiency_percent")
+
+    if search_query:
+        skills = skills.filter(name__icontains=search_query)
     if category_query:
         skills = skills.filter(category=category_query)
-    skills_json = serializers.serialize("json", skills, use_natural_foreign_keys=True)
-    return HttpResponse(skills_json, content_type="application/json")
 
-# 2. Display: Fetch JSON & deserialize to Python objects
+    data = []
+    for skill in skills:
+        starred_users = skill.starred_by.all()
+        is_starred = request.user in starred_users if request.user.is_authenticated else False
+        data.append({
+            "pk": str(skill.id),
+            "fields": {
+                "name": skill.name,
+                "category": skill.category,
+                "category_display": skill.get_category_display(),
+                "proficiency_percent": skill.proficiency_percent,
+                "is_core": skill.is_core,
+                "logo_url": skill.logo_url,
+                "star_count": starred_users.count(),
+                "is_starred": is_starred,
+                "starred_by_names": ", ".join([u.username for u in starred_users]),
+            }
+        })
+    return JsonResponse(data, safe=False)
+
+# 2. Display: Decoupled shell serving form and role context
 def show_skills(request):
-    json_response = get_skills_json(request)
-    deserialized = serializers.deserialize("json", json_response.content.decode("utf-8"))
-    skills = [item.object for item in deserialized]
-    category_query = request.GET.get("category", "").strip()
-
     context = {
         "name": NAME,
-        "skill_list": skills,
-        "selected_category": category_query,
         "is_editor": is_editor(request.user),
+        "form": SkillForm(),
     }
     return render(request, "skills.html", context)
+
+@require_POST
+def create_skill_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse({"message": "Hanya pemilik portofolio yang dapat menambahkan skill."}, status=403)
+
+    form = SkillForm(request.POST)
+    if form.is_valid():
+        skill = form.save()
+        return JsonResponse({"message": "Skill berhasil ditambahkan.", "pk": str(skill.id)}, status=201)
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 @login_required(login_url="/login/")
 def create_skill(request):
