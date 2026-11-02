@@ -38,11 +38,18 @@ class MainTest(TestCase):
         response = self.client.get(reverse("main:show_experience"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience.html")
-        self.assertContains(response, self.experience.title)
-        self.assertContains(response, self.experience.description)
-        self.assertContains(response, "Part-Time")
-        self.assertContains(response, "Sedang berlangsung")
+        self.assertContains(response, 'id="loading"')
+        self.assertContains(response, 'id="experience-cards-grid"')
+        self.assertContains(response, 'id="empty"')
+        self.assertContains(response, 'id="error"')
         self.assertContains(response, f'href="{reverse("main:show_main")}"')
+        json_res = self.client.get(reverse("main:get_experience_json"))
+        self.assertEqual(json_res.status_code, 200)
+        data = json_res.json()
+        self.assertEqual(data[0]["fields"]["title"], self.experience.title)
+        self.assertEqual(data[0]["fields"]["description"], self.experience.description)
+        self.assertEqual(data[0]["fields"]["category_display"], "Part-Time")
+        self.assertTrue(data[0]["fields"]["is_ongoing"])
 
     def test_empty_experience_page(self):
         Experience.objects.all().delete()
@@ -52,20 +59,19 @@ class MainTest(TestCase):
     def test_completed_experience(self):
         self.experience.ended_at = timezone.now()
         self.experience.save()
-        response = self.client.get(reverse("main:show_experience"))
         self.assertFalse(self.experience.is_ongoing)
-        self.assertContains(response, "Selesai")
-        self.assertNotContains(response, "Sedang berlangsung")
+        json_res = self.client.get(reverse("main:get_experience_json"))
+        self.assertEqual(json_res.status_code, 200)
+        data = json_res.json()
+        self.assertFalse(data[0]["fields"]["is_ongoing"])
 
     def test_experience_page_anonymous_controls(self):
         response = self.client.get(reverse("main:show_experience"))
         self.assertEqual(response.status_code, 200)
-        edit_url = reverse("main:update_experience", args=[self.experience.id])
-        self.assertNotContains(response, f'href="{edit_url}"')
         self.assertNotContains(response, "+ Tambah Pengalaman")
-        self.assertNotContains(response, f'popovertarget="delete-exp-{self.experience.id}"')
-        vouch_url = reverse("main:toggle_vouch_experience", args=[self.experience.id])
-        self.assertContains(response, f'action="{vouch_url}"')
+        self.assertNotContains(response, 'id="add-experience-modal"')
+        self.assertContains(response, 'const IS_SUPERUSER = "false" === "true";')
+        self.assertContains(response, 'const IS_EDITOR = "false" === "true";')
 
     def test_create_experience_anonymous_redirects(self):
         response = self.client.get(reverse("main:create_experience"))
@@ -581,7 +587,10 @@ class SkillTest(TestCase):
     def test_skills_page_displays_skill(self):
         response = self.client.get(reverse("main:show_skills"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Python")
+        self.assertContains(response, 'id="skills-grid"')
+        json_res = self.client.get(reverse("main:get_skills_json"))
+        self.assertEqual(json_res.status_code, 200)
+        self.assertEqual(json_res.json()[0]["fields"]["name"], "Python")
 
     # Anonymous Visitor Tests
     def test_anonymous_cannot_create_skill(self):
@@ -707,58 +716,55 @@ class SkillTest(TestCase):
         self.assertFalse(Skill.objects.filter(id=self.skill.id).exists())
 
     def test_skills_page_ui_controls_4_tiers(self):
-        edit_url = reverse("main:update_skill", args=[self.skill.id])
         endorse_url = reverse("main:toggle_endorse_skill", args=[self.skill.id])
 
         # 1. Anonymous visitor
         response_anon = self.client.get(reverse("main:show_skills"))
         self.assertNotContains(response_anon, "+ Tambah Skill")
-        self.assertNotContains(response_anon, f'href="{edit_url}"')
-        self.assertNotContains(response_anon, f'popovertarget="delete-skill-{self.skill.id}"')
-        self.assertContains(response_anon, f'action="{endorse_url}"')
-        self.assertContains(response_anon, "Endorse")
-        self.assertContains(response_anon, '<span class="star-count endorse-count">0</span>')
+        self.assertNotContains(response_anon, 'id="add-skill-modal"')
+        self.assertContains(response_anon, 'const IS_SUPERUSER = "false" === "true";')
+        self.assertContains(response_anon, 'const IS_EDITOR = "false" === "true";')
 
         # 2. Regular user
         self.client.login(username="regular_skill", password="RegularPassword123!")
         response_reg = self.client.get(reverse("main:show_skills"))
         self.assertNotContains(response_reg, "+ Tambah Skill")
-        self.assertNotContains(response_reg, f'href="{edit_url}"')
-        self.assertNotContains(response_reg, f'popovertarget="delete-skill-{self.skill.id}"')
-        self.assertContains(response_reg, f'action="{endorse_url}"')
+        self.assertNotContains(response_reg, 'id="add-skill-modal"')
+        self.assertContains(response_reg, 'const IS_SUPERUSER = "false" === "true";')
+        self.assertContains(response_reg, 'const IS_EDITOR = "false" === "true";')
 
         # Regular user endorses the skill
         self.client.post(endorse_url)
-        response_reg_starred = self.client.get(reverse("main:show_skills"))
-        self.assertContains(response_reg_starred, "is-endorsed")
-        self.assertContains(response_reg_starred, "Endorsed")
-        self.assertContains(response_reg_starred, '<span class="star-count endorse-count">1</span>')
-        self.assertContains(response_reg_starred, "regular_skill")
+        json_starred = self.client.get(reverse("main:get_skills_json")).json()
+        skill_item = next(item for item in json_starred if item["pk"] == str(self.skill.id))
+        self.assertTrue(skill_item["fields"]["is_starred"])
+        self.assertEqual(skill_item["fields"]["star_count"], 1)
+        self.assertIn("regular_skill", skill_item["fields"]["starred_by_names"])
 
         # 3. Editor user
         self.client.login(username="editor_skill", password="EditorPassword123!")
         response_editor = self.client.get(reverse("main:show_skills"))
         self.assertNotContains(response_editor, "+ Tambah Skill")
-        self.assertContains(response_editor, f'href="{edit_url}"')
-        self.assertNotContains(response_editor, f'popovertarget="delete-skill-{self.skill.id}"')
-        self.assertContains(response_editor, f'action="{endorse_url}"')
+        self.assertNotContains(response_editor, 'id="add-skill-modal"')
+        self.assertContains(response_editor, 'const IS_SUPERUSER = "false" === "true";')
+        self.assertContains(response_editor, 'const IS_EDITOR = "true" === "true";')
 
         # 4. Superuser
         self.client.login(username="admin_skill", password="AdminPassword123!")
         response_admin = self.client.get(reverse("main:show_skills"))
         self.assertContains(response_admin, "+ Tambah Skill")
-        self.assertContains(response_admin, f'href="{edit_url}"')
-        self.assertContains(response_admin, f'popovertarget="delete-skill-{self.skill.id}"')
-        self.assertContains(response_admin, f'action="{endorse_url}"')
+        self.assertContains(response_admin, 'id="add-skill-modal"')
+        self.assertContains(response_admin, 'const IS_SUPERUSER = "true" === "true";')
+        self.assertContains(response_admin, 'const IS_EDITOR = "true" === "true";')
 
     def test_api_skills_use_natural_foreign_keys(self):
-        import json
         self.skill.starred_by.add(self.regular_user)
         response = self.client.get(reverse("main:get_skills_json"))
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.content.decode("utf-8"))
+        data = response.json()
         starred_skill = next(item for item in data if item["pk"] == str(self.skill.id))
-        self.assertEqual(starred_skill["fields"]["starred_by"], [["regular_skill"]])
+        self.assertEqual(starred_skill["fields"]["star_count"], 1)
+        self.assertIn("regular_skill", starred_skill["fields"]["starred_by_names"])
 
 
 
@@ -975,4 +981,4 @@ class ProjectAjaxRoutesTest(TestCase):
 
 
 
-
+
