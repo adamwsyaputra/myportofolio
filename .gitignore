@@ -20,6 +20,11 @@ venv/
 build/
 dist/
 
+# Coverage
+.coverage
+htmlcov/
+*.coverage.*
+
 # IDE
 .vscode/*
 !.vscode/settings.json
