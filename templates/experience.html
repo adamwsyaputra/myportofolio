@@ -71,18 +71,32 @@
 {% if user.is_superuser %}
   {% include 'components/experience_form_modal.html' %}
 {% endif %}
+{% if user.is_superuser or is_editor %}
+  {% include 'components/experience_edit_modal.html' %}
+{% endif %}
 
+{% csrf_token %}
 <script>
-  const BASE_EXPERIENCE_ENDPOINT = "{% url 'main:get_experience_json' %}";
-  const CREATE_EXPERIENCE_ENDPOINT = "{% url 'main:create_experience_ajax' %}";
+  const BASE_EXPERIENCE_ENDPOINT = "{% url 'api:experience-list' %}";
+  const EXPERIENCE_DETAIL_TEMPLATE = "{% url 'api:experience-detail' '00000000-0000-0000-0000-000000000000' %}";
+  const EXPERIENCE_VOUCH_TEMPLATE = "{% url 'api:experience-vouch' '00000000-0000-0000-0000-000000000000' %}";
+  const IS_AUTHENTICATED = "{{ user.is_authenticated|yesno:'true,false' }}" === "true";
   const IS_SUPERUSER = "{{ user.is_superuser|yesno:'true,false' }}" === "true";
   const IS_EDITOR = "{{ is_editor|yesno:'true,false' }}" === "true";
-  const CSRF_TOKEN = "{{ csrf_token }}";
   const SEARCH_DEBOUNCE_DELAY = 300;
 
   let experienceAbortController;
   let searchDebounceTimer;
   let activeCategory = "{{ selected_category|default:'' }}";
+  const experienceCache = new Map();
+
+  function experienceDetailUrl(id) {
+    return EXPERIENCE_DETAIL_TEMPLATE.replace('00000000-0000-0000-0000-000000000000', id);
+  }
+
+  function experienceVouchUrl(id) {
+    return EXPERIENCE_VOUCH_TEMPLATE.replace('00000000-0000-0000-0000-000000000000', id);
+  }
 
   function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
     const loadingEl = document.getElementById('loading');
@@ -96,13 +110,32 @@
     if (gridEl) gridEl.classList.toggle('hide', !showGrid);
   }
 
-  function buildExperienceCardElement(item) {
-    const expId = item.pk;
-    const exp = item.fields;
+  function apiErrorMessage(data, status) {
+    const messages = Object.values(data)
+      .flat()
+      .filter(value => typeof value === 'string');
+    return messages.join(' ') || `Request failed (HTTP ${status}).`;
+  }
 
-    const editUrl = "{% url 'main:update_experience' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', expId);
-    const deleteUrl = "{% url 'main:delete_experience' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', expId);
-    const vouchUrl = "{% url 'main:toggle_vouch_experience' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', expId);
+  async function writeExperience(url, method, payload) {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: payload === undefined ? undefined : JSON.stringify(payload),
+    });
+    if (response.status === 204) return null;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(apiErrorMessage(data, response.status));
+    return data;
+  }
+
+  function buildExperienceCardElement(exp) {
+    const expId = exp.id;
+    experienceCache.set(String(expId), exp);
 
     const card = document.createElement('article');
     card.className = 'experience-card';
@@ -114,54 +147,57 @@
     let manageHtml = '';
     if (IS_SUPERUSER || IS_EDITOR) {
       manageHtml += `
-        <a href="${editUrl}" class="comic-btn comic-btn-sm comic-btn-secondary">
+        <button type="button"
+                class="comic-btn comic-btn-sm comic-btn-secondary"
+                data-action="edit"
+                data-id="${escapeHtml(expId)}">
           Edit
-        </a>
+        </button>
       `;
     }
     if (IS_SUPERUSER) {
       manageHtml += `
         <button type="button"
                 class="comic-btn comic-btn-sm comic-btn-danger"
-                popovertarget="delete-exp-${expId}"
+                popovertarget="delete-exp-${escapeHtml(expId)}"
                 aria-label="Hapus ${escapeHtml(exp.title)}"
                 title="Hapus pengalaman">
           Hapus
         </button>
 
-        <div id="delete-exp-${expId}"
+        <div id="delete-exp-${escapeHtml(expId)}"
              class="project-delete-modal"
              popover="auto"
              role="dialog"
              aria-modal="true"
-             aria-labelledby="delete-exp-title-${expId}">
+             aria-labelledby="delete-exp-title-${escapeHtml(expId)}">
           <button type="button"
                   class="project-delete-modal_backdrop"
-                  popovertarget="delete-exp-${expId}"
+                  popovertarget="delete-exp-${escapeHtml(expId)}"
                   popovertargetaction="hide"
                   aria-label="Tutup konfirmasi hapus"></button>
           <div class="project-delete-modal_content">
             <button type="button"
                     class="project-delete-modal_close"
-                    popovertarget="delete-exp-${expId}"
+                    popovertarget="delete-exp-${escapeHtml(expId)}"
                     popovertargetaction="hide"
                     aria-label="Tutup konfirmasi hapus">&times;</button>
             <p class="hero-kicker" style="margin-bottom: 0.25rem;">CONFIRM ACTION</p>
-            <h2 id="delete-exp-title-${expId}" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-bottom: 0.75rem;">Hapus Pengalaman?</h2>
+            <h2 id="delete-exp-title-${escapeHtml(expId)}" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-bottom: 0.75rem;">Hapus Pengalaman?</h2>
             <p style="color: var(--text-muted); margin-bottom: 1.25rem;">
               Apakah Anda yakin ingin menghapus pengalaman <strong>${escapeHtml(exp.title)}</strong>?
             </p>
 
-            <form method="post" action="${deleteUrl}">
-              <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
-              <div class="project-delete-modal_actions">
-                <button type="button"
-                        class="comic-btn comic-btn-sm comic-btn-secondary"
-                        popovertarget="delete-exp-${expId}"
-                        popovertargetaction="hide">Batal</button>
-                <button type="submit" class="comic-btn comic-btn-sm comic-btn-danger">Ya, Hapus</button>
-              </div>
-            </form>
+            <div class="project-delete-modal_actions">
+              <button type="button"
+                      class="comic-btn comic-btn-sm comic-btn-secondary"
+                      popovertarget="delete-exp-${escapeHtml(expId)}"
+                      popovertargetaction="hide">Batal</button>
+              <button type="button"
+                      class="comic-btn comic-btn-sm comic-btn-danger"
+                      data-action="delete"
+                      data-id="${escapeHtml(expId)}">Ya, Hapus</button>
+            </div>
           </div>
         </div>
       `;
@@ -170,6 +206,24 @@
     const vouchTitle = exp.vouched_by_names
       ? `Vouched by ${escapeHtml(exp.vouched_by_names)}`
       : 'Be the first to vouch for this role';
+
+    const vouchButtonHtml = IS_AUTHENTICATED
+      ? `<button type="button"
+                 class="button button-vouch${exp.is_vouched ? ' is-vouched' : ''}"
+                 data-action="vouch"
+                 data-id="${escapeHtml(expId)}"
+                 title="${vouchTitle}">
+           <span class="vouch-icon" aria-hidden="true">${exp.is_vouched ? '&#10003;' : '+'}</span>
+           <span class="vouch-label">${exp.is_vouched ? 'Vouched' : 'Vouch'}</span>
+           <span class="vouch-count star-count">${exp.vouch_count}</span>
+         </button>`
+      : `<a href="{% url 'main:login' %}"
+            class="button button-vouch"
+            title="${vouchTitle}">
+           <span class="vouch-icon" aria-hidden="true">+</span>
+           <span class="vouch-label">Vouch</span>
+           <span class="vouch-count star-count">${exp.vouch_count}</span>
+         </a>`;
 
     card.innerHTML = `
       <div class="experience-card-topbar">
@@ -182,82 +236,10 @@
       <div class="experience-card-actions">
         ${manageHtml ? `<div class="experience-card-actions_manage">${manageHtml}</div>` : ''}
         <div class="experience-card-actions_bottom">
-          <form method="post" action="${vouchUrl}" class="star-form vouch-form">
-            <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
-            <button type="submit"
-                    class="button button-vouch${exp.is_vouched ? ' is-vouched' : ''}"
-                    title="${vouchTitle}">
-              <span class="vouch-icon" aria-hidden="true">${exp.is_vouched ? '&#10003;' : '+'}</span>
-              <span class="vouch-label">${exp.is_vouched ? 'Vouched' : 'Vouch'}</span>
-              <span class="vouch-count star-count">${exp.vouch_count}</span>
-            </button>
-          </form>
+          ${vouchButtonHtml}
         </div>
       </div>
     `;
-
-    const vouchForm = card.querySelector('.vouch-form');
-    if (vouchForm) {
-      vouchForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = vouchForm.querySelector('button[type="submit"]');
-        if (!btn || btn.disabled) return;
-        btn.disabled = true;
-
-        try {
-          const resp = await fetch(vouchUrl, {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': getCookie('csrftoken'),
-              'Accept': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest',
-            },
-          });
-
-          if (resp.redirected || resp.url.includes('/login')) {
-            window.location.href = resp.url || "{% url 'main:login' %}";
-            return;
-          }
-
-          if (resp.ok) {
-            const data = await resp.json();
-            btn.classList.toggle('is-vouched', data.is_vouched);
-
-            const iconSpan = btn.querySelector('.vouch-icon');
-            if (iconSpan) {
-              iconSpan.innerHTML = data.is_vouched ? '&#10003;' : '+';
-            }
-
-            const labelSpan = btn.querySelector('.vouch-label');
-            if (labelSpan) {
-              labelSpan.textContent = data.is_vouched ? 'Vouched' : 'Vouch';
-            }
-
-            const countSpan = btn.querySelector('.vouch-count');
-            if (countSpan) {
-              countSpan.textContent = data.vouch_count;
-            }
-
-            btn.title = data.vouched_by_names
-              ? `Vouched by ${data.vouched_by_names}`
-              : 'Be the first to vouch for this role';
-
-            if (data.is_vouched) {
-              showToast('Vouched!', `You vouched for ${data.title || exp.title}.`, 'normal');
-            } else {
-              showToast('Vouch Removed', `You removed your vouch for ${data.title || exp.title}.`, 'normal');
-            }
-          } else {
-            showToast('Error', 'Gagal memperbarui vouch.', 'error');
-          }
-        } catch (err) {
-          console.error('Error toggling vouch:', err);
-          showToast('Error', 'Terjadi kesalahan jaringan.', 'error');
-        } finally {
-          btn.disabled = false;
-        }
-      });
-    }
 
     return card;
   }
@@ -271,42 +253,35 @@
 
     displayPageSection({ showLoading: true });
 
-    let url = BASE_EXPERIENCE_ENDPOINT;
-    const params = [];
+    const url = new URL(BASE_EXPERIENCE_ENDPOINT, window.location.origin);
     if (query) {
-      params.push(`q=${encodeURIComponent(query)}`);
+      url.searchParams.set('q', query);
     }
     if (activeCategory) {
-      params.push(`category=${encodeURIComponent(activeCategory)}`);
-    }
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
+      url.searchParams.set('category', activeCategory);
     }
 
     try {
       const response = await fetch(url, {
         signal: experienceAbortController.signal,
         headers: {
-          'Accept': 'application/json',
-        }
+          Accept: 'application/json',
+        },
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      const data = await response.json();
+      const experiences = await response.json();
       const gridEl = document.getElementById('experience-cards-grid');
 
-      if (!data || data.length === 0) {
+      if (!experiences || experiences.length === 0) {
+        if (gridEl) gridEl.replaceChildren();
         displayPageSection({ showEmpty: true });
       } else {
         if (gridEl) {
-          gridEl.innerHTML = '';
-          data.forEach(item => {
-            const card = buildExperienceCardElement(item);
-            gridEl.appendChild(card);
-          });
+          gridEl.replaceChildren(...experiences.map(buildExperienceCardElement));
         }
         displayPageSection({ showGrid: true });
       }
@@ -321,6 +296,7 @@
 
   const experienceSearchForm = document.getElementById('experience-search-form');
   const experienceSearchInput = document.getElementById('experience-search-input');
+  const gridContainer = document.getElementById('experience-cards-grid');
 
   if (experienceSearchInput) {
     experienceSearchInput.addEventListener('input', () => {
@@ -366,6 +342,21 @@
   }
   window.closeExperienceModal = closeExperienceModal;
 
+  function openEditExperienceModal(expId) {
+    const exp = experienceCache.get(String(expId));
+    const modal = document.getElementById('edit-experience-modal');
+    if (!exp || !modal) return;
+
+    document.getElementById('edit-experience-id').value = exp.id;
+    document.getElementById('edit-experience-title').value = exp.title || '';
+    document.getElementById('edit-experience-category').value = exp.category || 'full-time';
+    document.getElementById('edit-experience-description').value = exp.description || '';
+    document.getElementById('edit-experience-thumbnail').value = exp.thumbnail || '';
+    document.getElementById('edit-experience-ongoing').checked = Boolean(exp.is_ongoing);
+
+    modal.showPopover();
+  }
+
   const experienceForm = document.getElementById('experience-form');
 
   async function addExperience(event) {
@@ -374,55 +365,100 @@
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-      const formData = new FormData(experienceForm);
-      const response = await fetch(CREATE_EXPERIENCE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': getCookie('csrftoken'),
-          'Accept': 'application/json',
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        experienceForm.reset();
-        closeExperienceModal();
-        showToast('Berhasil', 'Pengalaman baru berhasil ditambahkan!', 'success');
-        fetchExperience(experienceSearchInput ? experienceSearchInput.value.trim() : '');
-      } else {
-        const errorMessages = [];
-        if (result.errors) {
-          for (const field in result.errors) {
-            if (Array.isArray(result.errors[field])) {
-              result.errors[field].forEach(err => {
-                if (err && err.message) {
-                  errorMessages.push(err.message);
-                }
-              });
-            }
-          }
-        }
-        if (errorMessages.length === 0 && result.message) {
-          errorMessages.push(result.message);
-        }
-        if (errorMessages.length === 0) {
-          errorMessages.push('Terjadi kesalahan saat menambahkan pengalaman.');
-        }
-        showToast('Gagal menambahkan pengalaman', errorMessages.join(' '), 'error');
-      }
+      const fields = new FormData(experienceForm);
+      const payload = {
+        title: fields.get('title'),
+        category: fields.get('category'),
+        description: fields.get('description'),
+        thumbnail: fields.get('thumbnail') || '',
+        is_ongoing: Boolean(fields.get('is_ongoing')),
+      };
+      await writeExperience(BASE_EXPERIENCE_ENDPOINT, 'POST', payload);
+      experienceForm.reset();
+      closeExperienceModal();
+      showToast('Berhasil', 'Pengalaman baru berhasil ditambahkan!', 'success');
+      await fetchExperience(experienceSearchInput ? experienceSearchInput.value.trim() : '');
     } catch (error) {
       console.error('Error adding experience:', error);
-      showToast('Gagal menambahkan pengalaman', 'Terjadi kesalahan jaringan atau server.', 'error');
+      showToast('Gagal menambahkan pengalaman', error.message, 'error');
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }
   }
 
-  // Critical Null Guard
   if (experienceForm) {
     experienceForm.addEventListener('submit', addExperience);
+  }
+
+  const editExperienceForm = document.getElementById('edit-experience-form');
+
+  async function updateExperience(event) {
+    event.preventDefault();
+    const submitBtn = editExperienceForm.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const fields = new FormData(editExperienceForm);
+      const expId = fields.get('id');
+      const payload = {
+        title: fields.get('title'),
+        category: fields.get('category'),
+        description: fields.get('description'),
+        thumbnail: fields.get('thumbnail') || '',
+        is_ongoing: Boolean(fields.get('is_ongoing')),
+      };
+      await writeExperience(experienceDetailUrl(expId), 'PATCH', payload);
+      const editModal = document.getElementById('edit-experience-modal');
+      if (editModal) editModal.hidePopover();
+      showToast('Berhasil', 'Pengalaman berhasil diperbarui!', 'success');
+      await fetchExperience(experienceSearchInput ? experienceSearchInput.value.trim() : '');
+    } catch (error) {
+      console.error('Error updating experience:', error);
+      showToast('Gagal memperbarui pengalaman', error.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  }
+
+  if (editExperienceForm) {
+    editExperienceForm.addEventListener('submit', updateExperience);
+  }
+
+  if (gridContainer) {
+    gridContainer.addEventListener('click', async function (event) {
+      const button = event.target.closest('button[data-action]');
+      if (!button || button.disabled) return;
+
+      const action = button.dataset.action;
+      const expId = button.dataset.id;
+
+      if (action === 'edit') {
+        openEditExperienceModal(expId);
+        return;
+      }
+
+      button.disabled = true;
+      try {
+        if (action === 'vouch') {
+          const data = await writeExperience(experienceVouchUrl(expId), 'POST');
+          if (data && data.is_vouched) {
+            showToast('Vouched!', `You vouched for ${data.title}.`, 'normal');
+          } else {
+            showToast('Vouch Removed', 'Vouch berhasil diperbarui.', 'normal');
+          }
+        } else if (action === 'delete') {
+          await writeExperience(experienceDetailUrl(expId), 'DELETE');
+          const modal = document.getElementById(`delete-exp-${expId}`);
+          if (modal && modal.matches(':popover-open')) modal.hidePopover();
+          showToast('Berhasil', 'Pengalaman dihapus.', 'success');
+        }
+        await fetchExperience(experienceSearchInput ? experienceSearchInput.value.trim() : '');
+      } catch (error) {
+        showToast('Gagal Memproses', error.message, 'error');
+      } finally {
+        button.disabled = false;
+      }
+    });
   }
 
   // Initial fetch

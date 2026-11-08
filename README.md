@@ -15,7 +15,7 @@ Website portofolio pribadi berbasis web dinamis berarsitektur Model-View-Templat
 
 ## 🛠️ Tech Stack & Architecture
 
-* **Framework Backend**: Django (Python 3.x)
+* **Framework Backend**: Django (Python 3.x) & Django REST Framework (DRF)
 * **Database**: PostgreSQL (Production PWS) & SQLite3 (Local Development)
 * **Markup & Struktur**: HTML5 Semantik (`<header>`, `<nav>`, `<main>`, `<section>`, `<article>`, `<dl>`, `<footer>`)
 * **Styling**: Pure CSS3 (CSS Grid, Flexbox, Custom Properties, Media Queries, Halftone Screentone)
@@ -86,11 +86,11 @@ Buka `http://localhost:8000` pada peramban web Anda.
 - [x] **Minggu 5**
   - [x] Tutorial 05
   - [x] Individual Assignment 5
-- [ ] **Minggu 6**
-  - [ ] Tutorial 06
-  - [ ] Individual Assignment 6
+- [x] **Minggu 6**
+  - [x] Tutorial 06
+  - [x] Individual Assignment 6
 - [ ] **Minggu 7**
-  - [ ] Tutorial 07
+  - [x] Tutorial 07
   - [ ] Individual Assignment 7
 
 ---
@@ -104,3 +104,4 @@ Dokumentasi lengkap terkait jawaban pertanyaan reflektif, analisis keterbatasan 
 * [📄 **Individual Assignment 3 Documentation**](docs/assignment-3.md)
 * [📄 **Individual Assignment 4 Documentation**](docs/assignment-4.md)
 * [📄 **Individual Assignment 5 Documentation**](docs/assignment-5.md)
+* [📄 **Individual Assignment 6 Documentation**](docs/assignment-6.md)
