@@ -1,0 +1,94 @@
+<div id="edit-experience-modal"
+     class="project-form-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="edit-experience-modal-title">
+  <button type="button"
+          class="project-form-modal_backdrop"
+          popovertarget="edit-experience-modal"
+          popovertargetaction="hide"
+          aria-label="Tutup modal"></button>
+  <div class="project-form-modal_content">
+    <button type="button"
+            class="project-form-modal_close"
+            popovertarget="edit-experience-modal"
+            popovertargetaction="hide"
+            aria-label="Tutup modal">&times;</button>
+    <div class="comic-badge-banner" style="margin-bottom: 0.5rem;">
+      <span class="comic-dot red"></span>
+      <span class="comic-dot yellow"></span>
+      <span class="comic-dot green"></span>
+      <code class="comic-header-tag">CONSOLE // EDIT-EXPERIENCE</code>
+    </div>
+    <p class="hero-kicker" style="margin-bottom: 0.25rem;">PERBARUI PENGALAMAN</p>
+    <h2 id="edit-experience-modal-title" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.5rem; margin-bottom: 1.25rem; color: var(--ink);">
+      Edit Pengalaman
+    </h2>
+
+    <form id="edit-experience-form" class="project-form">
+      <input type="hidden" id="edit-experience-id" name="id">
+
+      <div class="form-group">
+        <label for="edit-experience-title">Judul Pengalaman</label>
+        <input type="text"
+               id="edit-experience-title"
+               name="title"
+               class="form-input"
+               maxlength="255"
+               placeholder="e.g., Software Engineer Intern"
+               required>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-experience-category">Kategori</label>
+        <select id="edit-experience-category" name="category" class="form-input">
+          <option value="internship">Internship</option>
+          <option value="research">Research</option>
+          <option value="volunteer">Volunteer</option>
+          <option value="part-time">Part-Time</option>
+          <option value="full-time">Full-Time</option>
+          <option value="freelance">Freelance</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-experience-description">Deskripsi Peran &amp; Tanggung Jawab</label>
+        <textarea id="edit-experience-description"
+                  name="description"
+                  rows="4"
+                  placeholder="Ceritakan peran, proyek, dan kontribusi Anda..."
+                  required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-experience-thumbnail">URL Thumbnail (Opsional)</label>
+        <input type="url"
+               id="edit-experience-thumbnail"
+               name="thumbnail"
+               class="form-input"
+               placeholder="https://drive.google.com/thumbnail?id=...&sz=w1000">
+      </div>
+
+      <div class="form-group">
+        <label for="edit-experience-ongoing">Sedang Berlangsung?</label>
+        <input type="checkbox"
+               id="edit-experience-ongoing"
+               name="is_ongoing"
+               class="form-checkbox">
+      </div>
+
+      <div class="form-actions-group" style="margin-top: 1.75rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button"
+                class="comic-btn comic-btn-secondary"
+                popovertarget="edit-experience-modal"
+                popovertargetaction="hide">
+          Batal
+        </button>
+        <button type="submit" class="comic-btn comic-btn-primary">
+          Simpan Perubahan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
