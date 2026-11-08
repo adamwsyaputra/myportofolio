@@ -65,18 +65,32 @@
 {% if user.is_superuser %}
   {% include 'components/skill_form_modal.html' %}
 {% endif %}
+{% if user.is_superuser or is_editor %}
+  {% include 'components/skill_edit_modal.html' %}
+{% endif %}
 
+{% csrf_token %}
 <script>
-  const BASE_SKILLS_ENDPOINT = "{% url 'main:get_skills_json' %}";
-  const CREATE_SKILL_ENDPOINT = "{% url 'main:create_skill_ajax' %}";
+  const BASE_SKILLS_ENDPOINT = "{% url 'api:skill-list' %}";
+  const SKILL_DETAIL_TEMPLATE = "{% url 'api:skill-detail' '00000000-0000-0000-0000-000000000000' %}";
+  const SKILL_STAR_TEMPLATE = "{% url 'api:skill-star' '00000000-0000-0000-0000-000000000000' %}";
+  const IS_AUTHENTICATED = "{{ user.is_authenticated|yesno:'true,false' }}" === "true";
   const IS_SUPERUSER = "{{ user.is_superuser|yesno:'true,false' }}" === "true";
   const IS_EDITOR = "{{ is_editor|yesno:'true,false' }}" === "true";
-  const CSRF_TOKEN = "{{ csrf_token }}";
   const SEARCH_DEBOUNCE_DELAY = 300;
 
   let skillsAbortController;
   let searchDebounceTimer;
   let activeCategory = "{{ selected_category|default:'' }}";
+  const skillsCache = new Map();
+
+  function skillDetailUrl(id) {
+    return SKILL_DETAIL_TEMPLATE.replace('00000000-0000-0000-0000-000000000000', id);
+  }
+
+  function skillStarUrl(id) {
+    return SKILL_STAR_TEMPLATE.replace('00000000-0000-0000-0000-000000000000', id);
+  }
 
   function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
     const loadingEl = document.getElementById('loading');
@@ -90,14 +104,32 @@
     if (gridEl) gridEl.classList.toggle('hide', !showGrid);
   }
 
-  function buildSkillCardElement(item) {
-    const skillId = item.pk;
-    const skill = item.fields;
-    const fields = item.fields;
+  function apiErrorMessage(data, status) {
+    const messages = Object.values(data)
+      .flat()
+      .filter(value => typeof value === 'string');
+    return messages.join(' ') || `Request failed (HTTP ${status}).`;
+  }
 
-    const editUrl = "{% url 'main:update_skill' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', skillId);
-    const deleteUrl = "{% url 'main:delete_skill' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', skillId);
-    const starUrl = "{% url 'main:toggle_star_skill' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', skillId);
+  async function writeSkill(url, method, payload) {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: payload === undefined ? undefined : JSON.stringify(payload),
+    });
+    if (response.status === 204) return null;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(apiErrorMessage(data, response.status));
+    return data;
+  }
+
+  function buildSkillCardElement(skill) {
+    const skillId = skill.id;
+    skillsCache.set(String(skillId), skill);
 
     const card = document.createElement('article');
     card.className = 'skill-card';
@@ -119,62 +151,85 @@
     let manageHtml = '';
     if (IS_SUPERUSER || IS_EDITOR) {
       manageHtml += `
-        <a href="${editUrl}" class="comic-btn comic-btn-sm comic-btn-secondary">
+        <button type="button"
+                class="comic-btn comic-btn-sm comic-btn-secondary"
+                data-action="edit"
+                data-id="${escapeHtml(skillId)}">
           Edit
-        </a>
+        </button>
       `;
     }
     if (IS_SUPERUSER) {
       manageHtml += `
         <button type="button"
                 class="comic-btn comic-btn-sm comic-btn-danger"
-                popovertarget="delete-skill-${skillId}"
+                popovertarget="delete-skill-${escapeHtml(skillId)}"
                 aria-label="Hapus ${escapeHtml(skill.name)}"
                 title="Hapus skill">
           Hapus
         </button>
 
-        <div id="delete-skill-${skillId}"
+        <div id="delete-skill-${escapeHtml(skillId)}"
              class="project-delete-modal"
              popover="auto"
              role="dialog"
              aria-modal="true"
-             aria-labelledby="delete-skill-title-${skillId}">
+             aria-labelledby="delete-skill-title-${escapeHtml(skillId)}">
           <button type="button"
                   class="project-delete-modal_backdrop"
-                  popovertarget="delete-skill-${skillId}"
+                  popovertarget="delete-skill-${escapeHtml(skillId)}"
                   popovertargetaction="hide"
                   aria-label="Tutup konfirmasi hapus"></button>
           <div class="project-delete-modal_content">
             <button type="button"
                     class="project-delete-modal_close"
-                    popovertarget="delete-skill-${skillId}"
+                    popovertarget="delete-skill-${escapeHtml(skillId)}"
                     popovertargetaction="hide"
                     aria-label="Tutup konfirmasi hapus">&times;</button>
             <p class="hero-kicker" style="margin-bottom: 0.25rem;">CONFIRM ACTION</p>
-            <h2 id="delete-skill-title-${skillId}" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-bottom: 0.75rem;">Hapus Skill?</h2>
+            <h2 id="delete-skill-title-${escapeHtml(skillId)}" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-bottom: 0.75rem;">Hapus Skill?</h2>
             <p style="color: var(--text-muted); margin-bottom: 1.25rem;">
               Apakah Anda yakin ingin menghapus keahlian <strong>${escapeHtml(skill.name)}</strong>?
             </p>
 
-            <form method="post" action="${deleteUrl}">
-              <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
-              <div class="project-delete-modal_actions">
-                <button type="button"
-                        class="comic-btn comic-btn-sm comic-btn-secondary"
-                        popovertarget="delete-skill-${skillId}"
-                        popovertargetaction="hide">Batal</button>
-                <button type="submit" class="comic-btn comic-btn-sm comic-btn-danger">Konfirmasi Hapus</button>
-              </div>
-            </form>
+            <div class="project-delete-modal_actions">
+              <button type="button"
+                      class="comic-btn comic-btn-sm comic-btn-secondary"
+                      popovertarget="delete-skill-${escapeHtml(skillId)}"
+                      popovertargetaction="hide">Batal</button>
+              <button type="button"
+                      class="comic-btn comic-btn-sm comic-btn-danger"
+                      data-action="delete"
+                      data-id="${escapeHtml(skillId)}">Konfirmasi Hapus</button>
+            </div>
           </div>
         </div>
       `;
     }
 
-    const starTitle = fields.starred_by_names
-      ? `Endorsed by ${escapeHtml(fields.starred_by_names)}`
+    const starTitle = skill.starred_by_names
+      ? `Endorsed by ${escapeHtml(skill.starred_by_names)}`
       : 'Be the first to endorse';
+
+    const starButtonHtml = IS_AUTHENTICATED
+      ? `<button type="button"
+                 class="button button-endorse button-star${skill.is_starred ? ' is-endorsed is-starred' : ''}"
+                 data-action="star"
+                 data-id="${escapeHtml(skillId)}"
+                 title="${starTitle}">
+           <span class="star-icon" aria-hidden="true">${skill.is_starred ? '&#9733;' : '&#9734;'}</span>
+           <span class="star-label">${skill.is_starred ? 'Endorsed' : 'Endorse'}</span>
+           <span class="star-count endorse-count">${skill.star_count}</span>
+         </button>`
+      : `<a href="{% url 'main:login' %}"
+            class="button button-endorse button-star"
+            title="${starTitle}">
+           <span class="star-icon" aria-hidden="true">&#9734;</span>
+           <span class="star-label">Endorse</span>
+           <span class="star-count endorse-count">${skill.star_count}</span>
+         </a>`;
+
+    const safeProficiency = Number(skill.proficiency_percent) || 0;
 
     card.innerHTML = `
       <div class="skill-card-topbar">
@@ -192,93 +247,20 @@
       <div class="comic-power-box">
         <div class="comic-power-meta">
           <span class="comic-stat-label">PROFICIENCY</span>
-          <span class="comic-stat-val">${skill.proficiency_percent}%</span>
+          <span class="comic-stat-val">${safeProficiency}%</span>
         </div>
-        <div class="comic-power-track" title="${skill.proficiency_percent}% Proficiency">
-          <div class="comic-power-fill" style="width: ${skill.proficiency_percent}%;"></div>
+        <div class="comic-power-track" title="${safeProficiency}% Proficiency">
+          <div class="comic-power-fill" style="width: ${safeProficiency}%;"></div>
         </div>
       </div>
 
       <div class="skill-card-actions">
         ${manageHtml ? `<div class="skill-card-actions_manage">${manageHtml}</div>` : ''}
         <div class="skill-card-actions_bottom">
-          <form method="post" action="${starUrl}" class="star-form endorse-form">
-            <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
-            <button type="submit"
-                    class="button button-endorse button-star${fields.is_starred ? ' is-endorsed is-starred' : ''}"
-                    title="${starTitle}">
-              <span class="star-icon" aria-hidden="true">${fields.is_starred ? '&#9733;' : '&#9734;'}</span>
-              <span class="star-label">${fields.is_starred ? 'Endorsed' : 'Endorse'}</span>
-              <span class="star-count endorse-count">${fields.star_count}</span>
-            </button>
-          </form>
+          ${starButtonHtml}
         </div>
       </div>
     `;
-
-    const starForm = card.querySelector('.star-form');
-    if (starForm) {
-      starForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = starForm.querySelector('button[type="submit"]');
-        if (!btn || btn.disabled) return;
-        btn.disabled = true;
-
-        try {
-          const resp = await fetch(starUrl, {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': getCookie('csrftoken'),
-              'Accept': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest',
-            },
-          });
-
-          if (resp.redirected || resp.url.includes('/login')) {
-            window.location.href = resp.url || "{% url 'main:login' %}";
-            return;
-          }
-
-          if (resp.ok) {
-            const data = await resp.json();
-            btn.classList.toggle('is-starred', data.is_starred);
-            btn.classList.toggle('is-endorsed', data.is_starred);
-
-            const iconSpan = btn.querySelector('.star-icon');
-            if (iconSpan) {
-              iconSpan.innerHTML = data.is_starred ? '&#9733;' : '&#9734;';
-            }
-
-            const labelSpan = btn.querySelector('.star-label');
-            if (labelSpan) {
-              labelSpan.textContent = data.is_starred ? 'Endorsed' : 'Endorse';
-            }
-
-            const countSpan = btn.querySelector('.star-count');
-            if (countSpan) {
-              countSpan.textContent = data.star_count;
-            }
-
-            btn.title = data.starred_by_names
-              ? `Endorsed by ${data.starred_by_names}`
-              : 'Be the first to endorse';
-
-            if (data.is_starred) {
-              showToast('Endorsed!', `You endorsed ${data.name || skill.name}.`, 'normal');
-            } else {
-              showToast('Endorsement Removed', `You removed your endorsement from ${data.name || skill.name}.`, 'normal');
-            }
-          } else {
-            showToast('Error', 'Gagal memperbarui endorsement.', 'error');
-          }
-        } catch (err) {
-          console.error('Error toggling endorse:', err);
-          showToast('Error', 'Terjadi kesalahan jaringan.', 'error');
-        } finally {
-          btn.disabled = false;
-        }
-      });
-    }
 
     return card;
   }
@@ -292,42 +274,35 @@
 
     displayPageSection({ showLoading: true });
 
-    let url = BASE_SKILLS_ENDPOINT;
-    const params = [];
+    const url = new URL(BASE_SKILLS_ENDPOINT, window.location.origin);
     if (query) {
-      params.push(`q=${encodeURIComponent(query)}`);
+      url.searchParams.set('q', query);
     }
     if (activeCategory) {
-      params.push(`category=${encodeURIComponent(activeCategory)}`);
-    }
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
+      url.searchParams.set('category', activeCategory);
     }
 
     try {
       const response = await fetch(url, {
         signal: skillsAbortController.signal,
         headers: {
-          'Accept': 'application/json',
-        }
+          Accept: 'application/json',
+        },
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      const data = await response.json();
+      const skills = await response.json();
       const gridEl = document.getElementById('skills-grid');
 
-      if (!data || data.length === 0) {
+      if (!skills || skills.length === 0) {
+        if (gridEl) gridEl.replaceChildren();
         displayPageSection({ showEmpty: true });
       } else {
         if (gridEl) {
-          gridEl.innerHTML = '';
-          data.forEach(item => {
-            const card = buildSkillCardElement(item);
-            gridEl.appendChild(card);
-          });
+          gridEl.replaceChildren(...skills.map(buildSkillCardElement));
         }
         displayPageSection({ showGrid: true });
       }
@@ -342,6 +317,7 @@
 
   const skillSearchForm = document.getElementById('skill-search-form');
   const skillSearchInput = document.getElementById('skill-search-input');
+  const gridContainer = document.getElementById('skills-grid');
 
   if (skillSearchInput) {
     skillSearchInput.addEventListener('input', () => {
@@ -387,6 +363,21 @@
   }
   window.closeSkillModal = closeSkillModal;
 
+  function openEditSkillModal(skillId) {
+    const skill = skillsCache.get(String(skillId));
+    const modal = document.getElementById('edit-skill-modal');
+    if (!skill || !modal) return;
+
+    document.getElementById('edit-skill-id').value = skill.id;
+    document.getElementById('edit-skill-name').value = skill.name || '';
+    document.getElementById('edit-skill-category').value = skill.category || 'languages';
+    document.getElementById('edit-skill-proficiency').value = skill.proficiency_percent ?? 75;
+    document.getElementById('edit-skill-logo').value = skill.logo_url || '';
+    document.getElementById('edit-skill-core').checked = Boolean(skill.is_core);
+
+    modal.showPopover();
+  }
+
   const skillForm = document.getElementById('skill-form');
 
   async function addSkill(event) {
@@ -395,55 +386,100 @@
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-      const formData = new FormData(skillForm);
-      const response = await fetch(CREATE_SKILL_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': getCookie('csrftoken'),
-          'Accept': 'application/json',
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        skillForm.reset();
-        closeSkillModal();
-        showToast('Berhasil', 'Skill baru berhasil ditambahkan!', 'success');
-        fetchSkills(skillSearchInput ? skillSearchInput.value.trim() : '');
-      } else {
-        const errorMessages = [];
-        if (result.errors) {
-          for (const field in result.errors) {
-            if (Array.isArray(result.errors[field])) {
-              result.errors[field].forEach(err => {
-                if (err && err.message) {
-                  errorMessages.push(err.message);
-                }
-              });
-            }
-          }
-        }
-        if (errorMessages.length === 0 && result.message) {
-          errorMessages.push(result.message);
-        }
-        if (errorMessages.length === 0) {
-          errorMessages.push('Terjadi kesalahan saat menambahkan skill.');
-        }
-        showToast('Gagal menambahkan skill', errorMessages.join(' '), 'error');
-      }
+      const fields = new FormData(skillForm);
+      const payload = {
+        name: fields.get('name'),
+        category: fields.get('category'),
+        proficiency_percent: Number(fields.get('proficiency_percent')),
+        logo_url: fields.get('logo_url') || '',
+        is_core: Boolean(fields.get('is_core')),
+      };
+      await writeSkill(BASE_SKILLS_ENDPOINT, 'POST', payload);
+      skillForm.reset();
+      closeSkillModal();
+      showToast('Berhasil', 'Skill baru berhasil ditambahkan!', 'success');
+      await fetchSkills(skillSearchInput ? skillSearchInput.value.trim() : '');
     } catch (error) {
       console.error('Error adding skill:', error);
-      showToast('Gagal menambahkan skill', 'Terjadi kesalahan jaringan atau server.', 'error');
+      showToast('Gagal menambahkan skill', error.message, 'error');
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }
   }
 
-  // Critical Null Guard
   if (skillForm) {
     skillForm.addEventListener('submit', addSkill);
+  }
+
+  const editSkillForm = document.getElementById('edit-skill-form');
+
+  async function updateSkill(event) {
+    event.preventDefault();
+    const submitBtn = editSkillForm.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const fields = new FormData(editSkillForm);
+      const skillId = fields.get('id');
+      const payload = {
+        name: fields.get('name'),
+        category: fields.get('category'),
+        proficiency_percent: Number(fields.get('proficiency_percent')),
+        logo_url: fields.get('logo_url') || '',
+        is_core: Boolean(fields.get('is_core')),
+      };
+      await writeSkill(skillDetailUrl(skillId), 'PATCH', payload);
+      const editModal = document.getElementById('edit-skill-modal');
+      if (editModal) editModal.hidePopover();
+      showToast('Berhasil', 'Skill berhasil diperbarui!', 'success');
+      await fetchSkills(skillSearchInput ? skillSearchInput.value.trim() : '');
+    } catch (error) {
+      console.error('Error updating skill:', error);
+      showToast('Gagal memperbarui skill', error.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  }
+
+  if (editSkillForm) {
+    editSkillForm.addEventListener('submit', updateSkill);
+  }
+
+  if (gridContainer) {
+    gridContainer.addEventListener('click', async function (event) {
+      const button = event.target.closest('button[data-action]');
+      if (!button || button.disabled) return;
+
+      const action = button.dataset.action;
+      const skillId = button.dataset.id;
+
+      if (action === 'edit') {
+        openEditSkillModal(skillId);
+        return;
+      }
+
+      button.disabled = true;
+      try {
+        if (action === 'star') {
+          const data = await writeSkill(skillStarUrl(skillId), 'POST');
+          if (data && data.is_starred) {
+            showToast('Endorsed!', `You endorsed ${data.name}.`, 'normal');
+          } else {
+            showToast('Endorsement Removed', 'Endorsement berhasil diperbarui.', 'normal');
+          }
+        } else if (action === 'delete') {
+          await writeSkill(skillDetailUrl(skillId), 'DELETE');
+          const modal = document.getElementById(`delete-skill-${skillId}`);
+          if (modal && modal.matches(':popover-open')) modal.hidePopover();
+          showToast('Berhasil', 'Skill dihapus.', 'success');
+        }
+        await fetchSkills(skillSearchInput ? skillSearchInput.value.trim() : '');
+      } catch (error) {
+        showToast('Gagal Memproses', error.message, 'error');
+      } finally {
+        button.disabled = false;
+      }
+    });
   }
 
   // Initial fetch
