@@ -8,7 +8,7 @@ Website portofolio pribadi berbasis web dinamis berarsitektur Model-View-Templat
 
 * **Nama**: Adam Wahyu Syaputra
 * **NPM**: 2506534964
-* **Kelas**: PBP B
+* **Kelas**: PBP D
 * **URL Deployment PWS**: [https://adam-wahyu51-myportofolio.pws.cs.ui.ac.id/](https://adam-wahyu51-myportofolio.pws.cs.ui.ac.id/)
 
 ---
