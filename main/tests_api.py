@@ -659,3 +659,65 @@ class ExperienceAPITest(APITestCase):
         )
         self.assertEqual(accepted.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Experience.objects.count(), 2)
+
+
+
+class TokenAuthAPITest(APITestCase):
+    """Verify DRF TokenAuthentication login, authenticated POST, and logout revocation."""
+
+    def setUp(self):
+        self.owner = User.objects.create_superuser(
+            username="token_owner",
+            password="test-password",
+            email="token_owner@example.com",
+        )
+        self.token_url = reverse("api:api_token_auth")
+        self.logout_url = reverse("api:api_logout")
+        self.projects_url = reverse("api:project-list")
+
+    def test_token_login_create_project_and_logout(self):
+        # 1. Obtain token via username + password
+        login_resp = self.client.post(
+            self.token_url,
+            {"username": "token_owner", "password": "test-password"},
+            format="json",
+        )
+        self.assertEqual(login_resp.status_code, status.HTTP_200_OK)
+        self.assertIn("token", login_resp.data)
+        token = login_resp.data["token"]
+
+        # 2. Use Authorization: Token <key> to create a project
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+        create_resp = self.client.post(
+            self.projects_url,
+            {
+                "title": "Mobile Token Project",
+                "description": "Created via DRF token auth",
+                "tech_stack": "Flutter, Django",
+                "project_url": "https://example.com/mobile",
+                "project_image_url": "",
+            },
+            format="json",
+        )
+        self.assertEqual(create_resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Project.objects.filter(title="Mobile Token Project").exists())
+
+        # 3. Logout revokes token and returns 204 No Content
+        logout_resp = self.client.post(self.logout_url)
+        self.assertEqual(logout_resp.status_code, status.HTTP_204_NO_CONTENT)
+
+        # 4. Subsequent write with revoked token is rejected
+        retry_resp = self.client.post(
+            self.projects_url,
+            {
+                "title": "Should Fail",
+                "description": "Token already revoked",
+                "tech_stack": "Flutter",
+            },
+            format="json",
+        )
+        self.assertIn(
+            retry_resp.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
+        self.assertFalse(Project.objects.filter(title="Should Fail").exists())
